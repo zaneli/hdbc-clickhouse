@@ -1,14 +1,23 @@
-module Database.HDBC.ClickHouse.Protocol.Hello (request, response) where
+module Database.HDBC.ClickHouse.Protocol.Hello (send) where
 
 import Control.Exception
 import Data.Word
 import Network.Socket (Socket)
-import Network.Socket.ByteString (recv)
+import Network.Socket.ByteString (sendAll, recv)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import qualified Database.HDBC.ClickHouse.Protocol.Encoder as E
 import qualified Database.HDBC.ClickHouse.Protocol.Decoder as D
+
+send :: Socket -> String -> String -> String -> Bool -> IO ()
+send sock database username password debug = do
+  sendAll sock $ request database username password
+  res <- response sock
+  D.readAll sock
+  if debug
+    then print res
+    else return ()
 
 request :: String -> String -> String -> B.ByteString
 request database username password =
@@ -36,9 +45,6 @@ response sock = do
   timezone <- if revision >= minRevisionWithServerTimeZone
     then fmap Just $ D.readString sock
     else return Nothing
-
-  D.readAll sock
-
   return (serverName, fromIntegral majorVersion, fromIntegral minorVersion, fromIntegral revision, timezone)
 
 requestType :: Word8

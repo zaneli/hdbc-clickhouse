@@ -6,7 +6,7 @@ import Database.HDBC.Types
 import Database.HDBC.DriverUtils
 import Control.Exception
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
-import Network.Socket.ByteString (sendAll, recv)
+import Network.Socket.ByteString (sendAll)
 
 import qualified Data.ByteString as B
 import qualified Database.HDBC.ClickHouse.ConnectionImpl as Impl
@@ -36,19 +36,14 @@ fconnect host port database username password = withSocketsDo $ do
                 connect sock (addrAddress serverAddr)
 
                 sendAll sock $ Hello.request database username password
-                r <- recvAll sock
-                case (B.uncons r) of
-                  Just (0, bs) -> print $ Hello.response bs
-                  Just (b, bs) -> throwIO $ userError $ "Unexpected Response: " ++ (show b)
-                  Nothing      -> throwIO $ userError "Unexpected Empty Response"
+                (Hello.response sock) >>= print
 
                 return sock
 
 fping :: Socket -> IO String
 fping sock = withSocketsDo $ do
   sendAll sock $ Ping.request
-  pong <- recvAll sock
-  return $ Ping.response pong
+  Ping.response sock
 
 fclose :: Socket -> IO ()
 fclose conn = close conn
@@ -70,12 +65,3 @@ frun conn sql args = do
 frunRaw :: Socket -> String -> IO ()
 frunRaw conn sql = do
   return ()
-
-recvAll :: Socket -> IO B.ByteString
-recvAll conn =
-  recvAll' conn B.empty
-  where
-    recvAll' conn bs = do
-      r <- recv conn 1024
-      let bs' = bs `B.append` r
-      if B.last r == 4 then (return bs') else recvAll' conn bs'

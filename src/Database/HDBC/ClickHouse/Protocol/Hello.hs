@@ -1,6 +1,9 @@
 module Database.HDBC.ClickHouse.Protocol.Hello (request, response) where
 
+import Control.Exception
 import Data.Word
+import Network.Socket (Socket)
+import Network.Socket.ByteString (recv)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
@@ -20,16 +23,29 @@ request database username password =
     E.encodeString password
   ]
 
-response bs =
-  let (serverName, rest1) = D.decodeString bs
-      (majorVersion, rest2) = D.decodeNum rest1
-      (minorVersion, rest3) = D.decodeNum rest2
-      (revision, rest4) = D.decodeNum rest3
-      (timezone, _) = if revision >= minRevisionWithServerTimeZone then D.decodeString rest4 else ("", rest4)
-  in (serverName, majorVersion, minorVersion, revision, timezone)
+response :: Socket -> IO (String, Int, Int, Int, Maybe String)
+response sock = do
+  bs <- recv sock 1
+  case (B.unpack bs) of
+    [responseType] -> return ()
+    xs             -> throwIO $ userError $ "Unexpected Response: " ++ (show xs)
+  serverName <- D.readString sock
+  majorVersion <- D.readNum sock
+  minorVersion <- D.readNum sock
+  revision <- D.readNum sock
+  timezone <- if revision >= minRevisionWithServerTimeZone
+    then fmap Just $ D.readString sock
+    else return Nothing
+
+  D.readAll sock
+
+  return (serverName, fromIntegral majorVersion, fromIntegral minorVersion, fromIntegral revision, timezone)
 
 requestType :: Word8
 requestType = 0
+
+responseType :: Word8
+responseType = 0
 
 majorVersion :: Word8
 majorVersion = 1

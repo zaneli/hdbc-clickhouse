@@ -1,7 +1,10 @@
-module Database.HDBC.ClickHouse.Protocol.Decoder (decodeString, decodeNum) where
+module Database.HDBC.ClickHouse.Protocol.Decoder (decodeString, decodeNum, readString, readNum, readAll) where
 
+import Control.Exception
 import Data.Bits
 import Data.Word
+import Network.Socket (Socket)
+import Network.Socket.ByteString (sendAll, recv)
 
 import qualified Codec.Binary.UTF8.String as C
 import qualified Data.ByteString as B
@@ -22,3 +25,29 @@ decodeNum bs = decodeNum' bs 0 0
         Just (h, t) | h < 0x80  -> (fromIntegral (n .|. (fromIntegral h) `shiftL` s), t)
                     | otherwise -> decodeNum' t (fromIntegral (n .|. ((fromIntegral h) .&. 0x7f) `shiftL` s)) (s + 7)
         Nothing -> (0, B.empty) -- TODO: error handling
+
+readString :: Socket -> IO String
+readString sock = do
+  size <- readNum sock
+  bs <- recv sock $ fromIntegral size
+  return $ C.decodeString $ B8.unpack bs
+
+readNum :: Socket -> IO Word64
+readNum sock = readNum' sock 0 0
+  where
+    readNum' :: Socket -> Word64 -> Int -> IO Word64
+    readNum' sock n s = do
+      bs <- recv sock 1
+      case (B.unpack bs) of
+        [b] | b < 0x80  -> return $ fromIntegral (n .|. (fromIntegral b) `shiftL` s)
+            | otherwise -> readNum' sock (fromIntegral (n .|. ((fromIntegral b) .&. 0x7f) `shiftL` s)) (s + 7)
+        _ -> throwIO $ userError $ "Unexpected Empty Response"
+
+readAll :: Socket -> IO B.ByteString
+readAll sock =
+  readAll' sock B.empty
+  where
+    readAll' sock bs = do
+      r <- recv sock 1024
+      let bs' = bs `B.append` r
+      if B.last r == 4 then (return bs') else readAll' sock bs'

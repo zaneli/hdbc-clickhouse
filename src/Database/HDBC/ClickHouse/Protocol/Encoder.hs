@@ -12,7 +12,6 @@ encodeString str =
       size    = B.singleton $ fromIntegral $ B.length encoded
   in size `B8.append` encoded
 
-
 encodeNum :: (Integral a, Bits a) => a -> B.ByteString
 encodeNum num =
   B.unfoldr f num

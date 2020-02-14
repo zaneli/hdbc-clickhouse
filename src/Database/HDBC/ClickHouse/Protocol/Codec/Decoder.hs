@@ -1,4 +1,4 @@
-module Database.HDBC.ClickHouse.Protocol.Decoder (decodeString, decodeNum, readString, readNum, readAll) where
+module Database.HDBC.ClickHouse.Protocol.Codec.Decoder (decodeString, decodeNum, readString, readNum, readAll) where
 
 import Control.Exception
 import Data.Bits

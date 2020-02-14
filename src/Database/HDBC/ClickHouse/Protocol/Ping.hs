@@ -6,7 +6,9 @@ import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll)
 
 import qualified Data.ByteString as B
-import qualified Database.HDBC.ClickHouse.Protocol.Decoder as D
+import qualified Database.HDBC.ClickHouse.Protocol.Codec.Decoder as D
+import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Client as Client
+import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server
 
 send :: Socket -> IO String
 send sock = do
@@ -14,17 +16,11 @@ send sock = do
   response sock
 
 request :: B.ByteString
-request = B.singleton requestType
+request = B.singleton Client.ping
 
 response :: Socket -> IO String
 response sock = do
   bs <- D.readAll sock
   case (B.unpack bs) of
-    [responseType] -> return "pong"
-    xs             -> throwIO $ userError $ "Unexpected Response: " ++ (show xs)
-
-requestType :: Word8
-requestType = 4
-
-responseType :: Word8
-responseType = 4
+    [x] | x == Server.pong -> return "pong"
+    xs                     -> throwIO $ userError $ "Unexpected Response: " ++ (show xs)

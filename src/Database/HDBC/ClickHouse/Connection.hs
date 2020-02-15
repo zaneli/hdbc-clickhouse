@@ -12,6 +12,7 @@ import qualified Data.ByteString as B
 import qualified Database.HDBC.ClickHouse.ConnectionImpl as Impl
 import qualified Database.HDBC.ClickHouse.Protocol.Hello as Hello
 import qualified Database.HDBC.ClickHouse.Protocol.Ping as Ping
+import qualified Database.HDBC.ClickHouse.Protocol.Query as Query
 
 connectClickHouse :: Config -> IO Impl.Connection
 connectClickHouse config =
@@ -63,4 +64,5 @@ frun sock sql args = do
 -- TODO: not implemented
 frunRaw :: Socket -> ServerInfo -> String -> IO ()
 frunRaw sock serverInfo sql = do
+  Query.send sock sql serverInfo
   return ()

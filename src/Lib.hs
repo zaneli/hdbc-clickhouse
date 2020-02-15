@@ -2,6 +2,7 @@ module Lib
     ( someFunc
     ) where
 
+import Database.HDBC
 import Database.HDBC.ClickHouse (connectClickHouse, Config(..), ping)
 
 someFunc :: IO ()
@@ -10,4 +11,5 @@ someFunc = do
   c <- connectClickHouse config
   pong <- ping c
   print pong
-  print 1
+  r <- runRaw c "select * from test_tbl"
+  print r

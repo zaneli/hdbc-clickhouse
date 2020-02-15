@@ -21,7 +21,7 @@ clientInfo = ClientInfo {
   clientName = "hdbc-clickhouse",
   clientMajorVersion = 1,
   clientMinorVersion = 1,
-  clientRevision = 54431
+  clientRevision = 54213
 }
 
 data ServerInfo = ServerInfo {
@@ -47,3 +47,7 @@ hasPatchVersion clientInfo serverRevision =
 hasServerTimeZone :: ClientInfo -> Int -> Bool
 hasServerTimeZone clientInfo serverRevision =
   (clientRevision clientInfo) >= 54058 && serverRevision >= 54058
+
+hasQuotaKeyInClientInfo :: ServerInfo -> Bool
+hasQuotaKeyInClientInfo serverInfo =
+  serverRevision serverInfo >= 54060

@@ -27,8 +27,8 @@ request sock config =
   sendAll sock $ B8.concat [
       B.singleton Client.hello,
       E.encodeString $ clientName clientInfo,
-      B.singleton $ fromIntegral $ clientMajorVersion clientInfo,
-      B.singleton $ fromIntegral $ clientMinorVersion clientInfo,
+      E.encodeNum $ clientMajorVersion clientInfo,
+      E.encodeNum $ clientMinorVersion clientInfo,
       E.encodeNum $ clientRevision clientInfo,
       E.encodeString $ database config,
       E.encodeString $ username config,

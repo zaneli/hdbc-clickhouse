@@ -4,6 +4,7 @@ import Control.Exception
 import Data.Word
 import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll, recv)
+import Database.HDBC.ClickHouse.Protocol
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
@@ -11,33 +12,31 @@ import qualified Database.HDBC.ClickHouse.Protocol.Codec.Encoder as E
 import qualified Database.HDBC.ClickHouse.Protocol.Codec.Decoder as D
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Client as Client
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server
-import qualified Database.HDBC.ClickHouse.Protocol.ClientInfo as ClientInfo
-import qualified Database.HDBC.ClickHouse.Protocol.ServerInfo as ServerInfo
 
-send :: Socket -> String -> String -> String -> Bool -> IO (String, Int, Int, Int, Maybe String)
-send sock database username password debug = do
-  sendAll sock $ request database username password
+send :: Socket -> Config -> IO ServerInfo
+send sock config = do
+  request sock config
   res <- response sock
   D.readAll sock
-  if debug
+  if (debug config)
     then print res
     else return ()
   return res
 
-request :: String -> String -> String -> B.ByteString
-request database username password =
-  B8.concat [
-    B.singleton Client.hello,
-    E.encodeString ClientInfo.name,
-    B.singleton ClientInfo.majorVersion,
-    B.singleton ClientInfo.minorVersion,
-    E.encodeNum ClientInfo.reversion,
-    E.encodeString database,
-    E.encodeString username,
-    E.encodeString password
-  ]
+request :: Socket -> Config -> IO ()
+request sock config =
+  sendAll sock $ B8.concat [
+      B.singleton Client.hello,
+      E.encodeString $ clientName clientInfo,
+      B.singleton $ fromIntegral $ clientMajorVersion clientInfo,
+      B.singleton $ fromIntegral $ clientMinorVersion clientInfo,
+      E.encodeNum $ clientRevision clientInfo,
+      E.encodeString $ database config,
+      E.encodeString $ username config,
+      E.encodeString $ password config
+    ]
 
-response :: Socket -> IO (String, Int, Int, Int, Maybe String)
+response :: Socket -> IO ServerInfo
 response sock = do
   bs <- recv sock 1
   case (B.unpack bs) of
@@ -47,7 +46,13 @@ response sock = do
   majorVersion <- D.readNum sock
   minorVersion <- D.readNum sock
   revision <- fmap fromIntegral $ D.readNum sock
-  timezone <- if revision >= ServerInfo.minRevisionWithServerTimeZone
+  timeZone <- if hasTimeZone revision
     then fmap Just $ D.readString sock
     else return Nothing
-  return (serverName, fromIntegral majorVersion, fromIntegral minorVersion, fromIntegral revision, timezone)
+  return ServerInfo {
+    serverName = serverName,
+    serverMajorVersion = fromIntegral majorVersion,
+    serverMinorVersion = fromIntegral minorVersion,
+    serverRevision = fromIntegral revision,
+    serverTimeZone = timeZone
+  }

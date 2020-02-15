@@ -12,11 +12,12 @@ import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server
 
 send :: Socket -> IO String
 send sock = do
-  sendAll sock $ request
+  request sock
   response sock
 
-request :: B.ByteString
-request = B.singleton Client.ping
+request :: Socket -> IO ()
+request sock =
+  sendAll sock $ B.singleton Client.ping
 
 response :: Socket -> IO String
 response sock = do

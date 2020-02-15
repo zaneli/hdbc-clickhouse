@@ -49,5 +49,6 @@ readAll sock =
   where
     readAll' sock bs = do
       r <- recv sock 1024
-      let bs' = bs `B.append` r
-      if B.last r == 4 then (return bs') else readAll' sock bs'
+      if (B.length r == 0 || B.last r == 4)
+        then return $ bs `B.append` r
+        else readAll' sock $ bs `B.append` r

@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module Database.HDBC.ClickHouse.Connection (connectClickHouse, Impl.Connection(), Impl.ping) where
 
 import Database.HDBC
@@ -7,20 +6,20 @@ import Database.HDBC.DriverUtils
 import Control.Exception
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString (sendAll)
+import Database.HDBC.ClickHouse.Protocol
 
 import qualified Data.ByteString as B
 import qualified Database.HDBC.ClickHouse.ConnectionImpl as Impl
 import qualified Database.HDBC.ClickHouse.Protocol.Hello as Hello
 import qualified Database.HDBC.ClickHouse.Protocol.Ping as Ping
-import qualified Database.HDBC.ClickHouse.Protocol.Query as Query
 
-connectClickHouse :: String -> Int -> String -> String -> String -> Bool -> IO Impl.Connection
-connectClickHouse host port database username password debug =
-  mkConn host port database username password debug
+connectClickHouse :: Config -> IO Impl.Connection
+connectClickHouse config =
+  mkConn config
 
-mkConn :: String -> Int -> String -> String -> String -> Bool -> IO Impl.Connection
-mkConn host port database username password debug = do
-  (sock, revision) <- fconnect host port database username password debug
+mkConn :: Config -> IO Impl.Connection
+mkConn config = do
+  (sock, revision) <- fconnect config
   return $ Impl.Connection {
     Impl.disconnect = fclose sock,
     Impl.commit = fcommit,
@@ -30,16 +29,16 @@ mkConn host port database username password debug = do
     Impl.ping = fping sock
   }
 
-fconnect :: String -> Int -> String -> String -> String -> Bool -> IO (Socket, Int)
-fconnect host port database username password debug = withSocketsDo $ do
-  addrInfo <- getAddrInfo Nothing (Just host) (Just $ show port)
+fconnect :: Config -> IO (Socket, ServerInfo)
+fconnect config = withSocketsDo $ do
+  addrInfo <- getAddrInfo Nothing (Just $ host config ) (Just $ show $ port config)
   let serverAddr = head addrInfo
   sock <- socket (addrFamily serverAddr) Stream defaultProtocol
   connect sock (addrAddress serverAddr)
 
-  (_, _, _, revision, _) <- Hello.send sock database username password debug
+  serverInfo <- Hello.send sock config
 
-  return (sock, revision)
+  return (sock, serverInfo)
 
 fping :: Socket -> IO String
 fping sock = withSocketsDo $ do
@@ -62,6 +61,6 @@ frun sock sql args = do
   return 1
 
 -- TODO: not implemented
-frunRaw :: Socket -> Int -> String -> IO ()
-frunRaw sock revision sql = do
+frunRaw :: Socket -> ServerInfo -> String -> IO ()
+frunRaw sock serverInfo sql = do
   return ()

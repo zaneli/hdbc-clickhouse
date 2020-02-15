@@ -2,10 +2,12 @@ module Lib
     ( someFunc
     ) where
 
-import Database.HDBC.ClickHouse
+import Database.HDBC.ClickHouse (connectClickHouse, Config(..), ping)
 
 someFunc :: IO ()
 someFunc = do
-  c <- connectClickHouse "127.0.0.1" 9000 "default" "default" "" True
+  let config = Config { host = "127.0.0.1", port = 9000, database = "default", username = "default", password = "", debug = True }
+  c <- connectClickHouse config
   pong <- ping c
   print pong
+  print 1

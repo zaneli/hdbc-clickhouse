@@ -17,7 +17,6 @@ send :: Socket -> Config -> IO ServerInfo
 send sock config = do
   request sock config
   res <- response sock
-  D.readAll sock
   if (debug config)
     then print res
     else return ()
@@ -46,13 +45,20 @@ response sock = do
   majorVersion <- D.readNum sock
   minorVersion <- D.readNum sock
   revision <- fmap fromIntegral $ D.readNum sock
-  timeZone <- if hasTimeZone revision
+  timeZone <- if hasServerTimeZone clientInfo revision
     then fmap Just $ D.readString sock
     else return Nothing
+  patchVersion <- if hasPatchVersion clientInfo revision
+    then fmap Just $ D.readString sock
+    else return Nothing
+  _ <- if not (hasPatchVersion clientInfo revision) && (hasServerDisplayName clientInfo revision)
+    then D.readString sock
+    else return ""
   return ServerInfo {
     serverName = serverName,
     serverMajorVersion = fromIntegral majorVersion,
     serverMinorVersion = fromIntegral minorVersion,
+    serverPatchVersion = patchVersion,
     serverRevision = fromIntegral revision,
     serverTimeZone = timeZone
   }

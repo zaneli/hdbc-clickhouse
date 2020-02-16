@@ -21,12 +21,23 @@ connectClickHouse config =
 mkConn :: Config -> IO Impl.Connection
 mkConn config = do
   (sock, serverInfo) <- fconnect config
+  let clientVer = clientVersion clientInfo
   return $ Impl.Connection {
     Impl.disconnect = fclose sock,
     Impl.commit = fcommit,
     Impl.rollback = frollback,
     Impl.run = frun sock,
     Impl.runRaw = frunRaw sock serverInfo config,
+    Impl.prepare = fprepare sock config,
+    Impl.clone = connectClickHouse config,
+    Impl.hdbcDriverName = "clickhouse",
+    Impl.hdbcClientVer = clientVer,
+    Impl.proxiedClientName = "clickhouse",
+    Impl.proxiedClientVer = clientVer,
+    Impl.dbTransactionSupport = True,
+    Impl.dbServerVer = serverVersion serverInfo,
+    Impl.getTables = fgetTables sock config,
+    Impl.describeTable = fdescribeTable sock config,
     Impl.ping = fping sock
   }
 
@@ -48,20 +59,28 @@ fping sock = withSocketsDo $ do
 fclose :: Socket -> IO ()
 fclose sock = close sock
 
--- TODO: not implemented
 fcommit :: IO ()
-fcommit = return ()
+fcommit =
+  throwIO $ userError "not implemented"
 
--- TODO: not implemented
 frollback :: IO ()
-frollback = return ()
+frollback =
+  throwIO $ userError "not implemented"
 
--- TODO: not implemented
 frun :: Socket -> String -> [SqlValue] -> IO Integer
-frun sock sql args = do
-  return 1
+frun sock sql args =
+  throwIO $ userError "not implemented"
 
 frunRaw :: Socket -> ServerInfo -> Config -> String -> IO ()
 frunRaw sock serverInfo config sql = do
   Query.send sock sql serverInfo config
   return ()
+
+fprepare sock config sql =
+  throwIO $ userError "not implemented"
+
+fgetTables sock config =
+  throwIO $ userError "not implemented"
+
+fdescribeTable sock config sql =
+  throwIO $ userError "not implemented"

@@ -24,6 +24,12 @@ clientInfo = ClientInfo {
   clientRevision = 54213
 }
 
+clientVersion :: ClientInfo -> String
+clientVersion clientInfo =
+  (show $ clientMajorVersion clientInfo) ++ "." ++
+    (show $ clientMinorVersion clientInfo) ++ "." ++
+    (show $ clientRevision clientInfo)
+
 data ServerInfo = ServerInfo {
   serverName :: String,
   serverMajorVersion :: Int,
@@ -32,6 +38,13 @@ data ServerInfo = ServerInfo {
   serverRevision :: Int,
   serverTimeZone :: Maybe String
 } deriving Show
+
+serverVersion :: ServerInfo -> String
+serverVersion serverInfo =
+  (show $ serverMajorVersion serverInfo) ++ "." ++
+    (show $ serverMinorVersion serverInfo) ++ "." ++
+    (show $ serverRevision serverInfo) ++
+    (maybe "" (\p -> " (" ++ p ++ ")") $ serverPatchVersion serverInfo)
 
 -- https://github.com/ClickHouse/ClickHouse/blob/e9af153819d3b666673e583e15705f861cf88cef/dbms/src/Core/Defines.h#L52
 hasServerDisplayName :: ClientInfo -> Int -> Bool

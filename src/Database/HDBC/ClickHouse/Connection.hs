@@ -20,13 +20,13 @@ connectClickHouse config =
 
 mkConn :: Config -> IO Impl.Connection
 mkConn config = do
-  (sock, revision) <- fconnect config
+  (sock, serverInfo) <- fconnect config
   return $ Impl.Connection {
     Impl.disconnect = fclose sock,
     Impl.commit = fcommit,
     Impl.rollback = frollback,
     Impl.run = frun sock,
-    Impl.runRaw = frunRaw sock revision,
+    Impl.runRaw = frunRaw sock serverInfo config,
     Impl.ping = fping sock
   }
 
@@ -61,8 +61,7 @@ frun :: Socket -> String -> [SqlValue] -> IO Integer
 frun sock sql args = do
   return 1
 
--- TODO: not implemented
-frunRaw :: Socket -> ServerInfo -> String -> IO ()
-frunRaw sock serverInfo sql = do
-  Query.send sock sql serverInfo
+frunRaw :: Socket -> ServerInfo -> Config -> String -> IO ()
+frunRaw sock serverInfo config sql = do
+  Query.send sock sql serverInfo config
   return ()

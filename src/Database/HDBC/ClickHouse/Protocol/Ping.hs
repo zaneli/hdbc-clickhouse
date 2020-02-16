@@ -2,6 +2,7 @@ module Database.HDBC.ClickHouse.Protocol.Ping (send) where
 
 import Control.Exception
 import Data.Word
+import Database.HDBC.ClickHouse.Exception
 import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll, recv)
 
@@ -23,5 +24,6 @@ response :: Socket -> IO String
 response sock = do
   bs <- recv sock 1
   case (B.unpack bs) of
-    [x] | x == Server.pong -> return "pong"
-    xs                      -> throwIO $ userError $ "Unexpected Response: " ++ (show xs)
+    [x] | x == Server.pong      -> return "pong"
+        | x == Server.exception -> (D.readException sock) >>= throwIO
+    xs                          -> throwIO $ unexpectedPacketType xs

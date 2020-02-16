@@ -6,6 +6,7 @@ import Data.Word
 import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll, recv)
 import Network.HostName
+import Database.HDBC.ClickHouse.Exception
 import Database.HDBC.ClickHouse.Protocol
 import Database.HDBC.ClickHouse.Protocol.Data
 import Text.Printf
@@ -18,13 +19,14 @@ import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Client as Client
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Compression as Compression
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server
 
-send :: Socket -> String -> ServerInfo -> IO ()
-send sock query serverInfo = do
+send :: Socket -> String -> ServerInfo -> Config -> IO ()
+send sock query serverInfo config = do
   host <- getHostName
   request sock host query serverInfo
-  response sock
+  response sock config
   return ()
 
+request :: Socket -> String -> String -> ServerInfo -> IO ()
 request sock host query serverInfo =
   sendAll sock $ B8.concat [
       B.singleton Client.query,
@@ -50,11 +52,13 @@ request sock host query serverInfo =
       encodeBlock
     ]
 
+encodeSettings :: B.ByteString
 encodeSettings =
     -- TODO: encode settings
     -- empty string is a marker of the end of the settings
   E.encodeString ""
 
+encodeBlock :: B.ByteString
 encodeBlock =
   B8.concat [
     B.singleton Client.blockOfData,
@@ -64,6 +68,7 @@ encodeBlock =
     B.singleton 0
   ]
 
+encodeBlockInfo :: B.ByteString
 encodeBlockInfo =
   B8.concat [
     B.singleton 1,
@@ -79,17 +84,19 @@ stateComplete = 2
 ifaceTypeTCP :: Word8
 ifaceTypeTCP = 1
 
-response :: Socket -> IO ()
-response sock = do
+response :: Socket -> Config -> IO ()
+response sock config = do
   bs <- recv sock 1
   case (B.unpack bs) of
-    [x] | x == Server.blockOfData -> (readBlock sock) >>= (\_ -> response sock)
-        | x == Server.profileInfo ->  (readProfileInfo sock) >>= (\_ -> response sock)
-        | x == Server.progress ->  (readProgress sock) >>= (\_ -> response sock)
+    [x] | x == Server.blockOfData -> (readBlock sock config) >>= (\_ -> response sock config)
+        | x == Server.profileInfo ->  (readProfileInfo sock config) >>= (\_ -> response sock config)
+        | x == Server.progress ->  (readProgress sock config) >>= (\_ -> response sock config)
+        | x == Server.exception -> (D.readException sock) >>= throwIO
         | x == Server.endOfStream -> return ()
-    xs -> throwIO $ userError $ "Unexpected Response: " ++ (show xs)
+    xs -> throwIO $ unexpectedPacketType xs
 
-readBlock sock = do
+readBlock :: Socket -> Config -> IO ()
+readBlock sock config = do
   D.readString sock
 
   -- block info
@@ -102,7 +109,9 @@ readBlock sock = do
   numColumns <- D.readNum sock
   numRows <- D.readNum sock
 
-  printf "[Data] bucketNum=%d, numColumns=%d, numRows=%d\n" bucketNum numColumns numRows
+  if (debug config)
+    then printf "[Data] bucketNum=%d, numColumns=%d, numRows=%d\n" bucketNum numColumns numRows
+    else return ()
 
   columns <- mapM (\i -> readColumns sock) [1..numColumns]
 
@@ -114,20 +123,24 @@ readColumns sock = do
   columnType <- D.readString sock
   return Column { columnName = columnName, columnType = columnType }
 
-readProfileInfo :: Socket -> IO ()
-readProfileInfo sock = do
+readProfileInfo :: Socket -> Config -> IO ()
+readProfileInfo sock config = do
   rows <- D.readNum sock
   blocks <- D.readNum sock
   bytes <- D.readNum sock
   appliedLimit <- D.readBool sock
   rowsBeforeLimit <- D.readNum sock
   calculatedRowsBeforeLimit <- D.readBool sock
-  printf "[ProfileInfo] rows=%d, blocks=%d, bytes=%d, appliedLimit=%s, rowsBeforeLimit=%d, calculatedRowsBeforeLimit=%s\n"
-           rows blocks bytes (show appliedLimit) rowsBeforeLimit (show calculatedRowsBeforeLimit)
+  if (debug config)
+    then printf "[ProfileInfo] rows=%d, blocks=%d, bytes=%d, appliedLimit=%s, rowsBeforeLimit=%d, calculatedRowsBeforeLimit=%s\n"
+                  rows blocks bytes (show appliedLimit) rowsBeforeLimit (show calculatedRowsBeforeLimit)
+    else return ()
 
-readProgress :: Socket -> IO ()
-readProgress sock = do
+readProgress :: Socket -> Config -> IO ()
+readProgress sock config = do
   rows <- D.readNum sock
   bytes <- D.readNum sock
   totalRows <- D.readNum sock
-  printf "[Progress] rows=%d, bytes=%d, totalRows=%d\n" rows bytes totalRows
+  if (debug config)
+    then printf "[Progress] rows=%d, bytes=%d, totalRows=%d\n" rows bytes totalRows
+    else return ()

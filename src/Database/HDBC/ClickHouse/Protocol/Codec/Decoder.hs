@@ -3,29 +3,15 @@ module Database.HDBC.ClickHouse.Protocol.Codec.Decoder where
 import Control.Exception
 import Data.Bits
 import Data.Int
+import Data.List ((\\))
 import Data.Word
+import Database.HDBC.ClickHouse.Exception
 import Network.Socket (Socket)
-import Network.Socket.ByteString (sendAll, recv)
+import Network.Socket.ByteString (recv)
 
 import qualified Codec.Binary.UTF8.String as C
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
-
-decodeString :: B.ByteString -> (String, B.ByteString)
-decodeString bs =
-  let (num, rest) = decodeNum bs
-      size        = fromIntegral num
-  in (C.decodeString $ B8.unpack $ B.take size rest, B.drop size rest)
-
-decodeNum :: B.ByteString -> (Word64, B.ByteString)
-decodeNum bs = decodeNum' bs 0 0
-  where
-    decodeNum' :: B.ByteString -> Word64 -> Int -> (Word64, B.ByteString)
-    decodeNum' bs' n s =
-      case (B.uncons bs') of
-        Just (h, t) | h < 0x80  -> (fromIntegral (n .|. (fromIntegral h) `shiftL` s), t)
-                    | otherwise -> decodeNum' t (fromIntegral (n .|. ((fromIntegral h) .&. 0x7f) `shiftL` s)) (s + 7)
-        Nothing -> (0, B.empty) -- TODO: error handling
 
 readString :: Socket -> IO String
 readString sock = do
@@ -44,7 +30,7 @@ readNum sock = readNum' sock 0 0
       case (B.unpack bs) of
         [b] | b < 0x80  -> return $ fromIntegral (n .|. (fromIntegral b) `shiftL` s)
             | otherwise -> readNum' sock (fromIntegral (n .|. ((fromIntegral b) .&. 0x7f) `shiftL` s)) (s + 7)
-        _ -> throwIO $ userError $ "Unexpected Empty Response"
+        xs -> throwIO $ unexpectedResponse "Number" xs
 
 readBool :: Socket -> IO Bool
 readBool sock = do
@@ -52,7 +38,7 @@ readBool sock = do
   case (B.unpack bs) of
     [1] -> return True
     [0] -> return False
-    x   -> throwIO $ userError $ "Unexpected Bool Response: " ++ (show x)
+    xs  -> throwIO $ unexpectedResponse "Bool" xs
 
 readInt32 :: Socket -> IO Int32
 readInt32 sock = do
@@ -65,6 +51,24 @@ readWord64 sock = do
   bs <- recv sock 8
   let (i, _) =  B.foldl (\(n, s) b -> (n .|. ((fromIntegral b) `shiftL` s), s + 8)) (0::Word64, 0) bs
   return i
+
+readException :: Socket -> IO ClickHouseException
+readException sock = do
+  code <- readInt32 sock
+  name <- readString sock
+  message <- readString sock
+  stackTrace <- readString sock
+  hasNested <- readBool sock
+  nested <- if hasNested
+    then fmap Just (readException sock)
+    else return Nothing
+  return ServerException {
+    code = fromIntegral code,
+    name = name,
+    message = message \\ (name ++ ": "),
+    stackTrace = stackTrace,
+    nested = nested
+  }
 
 readAll :: Socket -> IO B.ByteString
 readAll sock =

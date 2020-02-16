@@ -4,6 +4,7 @@ import Control.Exception
 import Data.Word
 import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll, recv)
+import Database.HDBC.ClickHouse.Exception
 import Database.HDBC.ClickHouse.Protocol
 import Text.Printf
 
@@ -46,8 +47,9 @@ response :: Socket -> IO ServerInfo
 response sock = do
   bs <- recv sock 1
   case (B.unpack bs) of
-    [x] | x == Server.hello -> return ()
-    xs                      -> throwIO $ userError $ "Unexpected Response: " ++ (show xs)
+    [x] | x == Server.hello     -> return ()
+        | x == Server.exception -> (D.readException sock) >>= throwIO
+    xs                          -> throwIO $ unexpectedPacketType xs
   serverName <- D.readString sock
   majorVersion <- D.readNum sock
   minorVersion <- D.readNum sock

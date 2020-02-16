@@ -13,3 +13,5 @@ someFunc = do
   print pong
   r <- runRaw c "select * from test_tbl"
   print r
+  runRaw c "select * from test_tbl"
+  print r

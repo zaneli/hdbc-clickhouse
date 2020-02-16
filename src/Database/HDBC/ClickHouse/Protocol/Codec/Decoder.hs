@@ -1,7 +1,8 @@
-module Database.HDBC.ClickHouse.Protocol.Codec.Decoder (decodeString, decodeNum, readString, readNum, readAll) where
+module Database.HDBC.ClickHouse.Protocol.Codec.Decoder where
 
 import Control.Exception
 import Data.Bits
+import Data.Int
 import Data.Word
 import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll, recv)
@@ -29,7 +30,9 @@ decodeNum bs = decodeNum' bs 0 0
 readString :: Socket -> IO String
 readString sock = do
   size <- readNum sock
-  bs <- recv sock $ fromIntegral size
+  bs <- if size == 0
+    then return B.empty
+    else recv sock $ fromIntegral size
   return $ C.decodeString $ B8.unpack bs
 
 readNum :: Socket -> IO Word64
@@ -42,6 +45,26 @@ readNum sock = readNum' sock 0 0
         [b] | b < 0x80  -> return $ fromIntegral (n .|. (fromIntegral b) `shiftL` s)
             | otherwise -> readNum' sock (fromIntegral (n .|. ((fromIntegral b) .&. 0x7f) `shiftL` s)) (s + 7)
         _ -> throwIO $ userError $ "Unexpected Empty Response"
+
+readBool :: Socket -> IO Bool
+readBool sock = do
+  bs <- recv sock 1
+  case (B.unpack bs) of
+    [1] -> return True
+    [0] -> return False
+    x   -> throwIO $ userError $ "Unexpected Bool Response: " ++ (show x)
+
+readInt32 :: Socket -> IO Int32
+readInt32 sock = do
+  bs <- recv sock 4
+  let (i, _) =  B.foldl (\(n, s) b -> (n .|. ((fromIntegral b) `shiftL` s), s + 8)) (0::Int32, 0) bs
+  return i
+
+readWord64 :: Socket -> IO Word64
+readWord64 sock = do
+  bs <- recv sock 8
+  let (i, _) =  B.foldl (\(n, s) b -> (n .|. ((fromIntegral b) `shiftL` s), s + 8)) (0::Word64, 0) bs
+  return i
 
 readAll :: Socket -> IO B.ByteString
 readAll sock =

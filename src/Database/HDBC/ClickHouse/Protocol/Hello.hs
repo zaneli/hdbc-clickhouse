@@ -5,6 +5,7 @@ import Data.Word
 import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll, recv)
 import Database.HDBC.ClickHouse.Protocol
+import Text.Printf
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
@@ -18,7 +19,13 @@ send sock config = do
   request sock config
   res <- response sock
   if (debug config)
-    then print res
+    then printf "[hello] serverName=%s, majorVersion=%d, minorVersion=%d, patchVersion=%s, revision=%d, timeZone=%s\n"
+                  (serverName res)
+                  (serverMajorVersion res)
+                  (serverMinorVersion res)
+                  (show $ serverPatchVersion res)
+                  (serverRevision res)
+                  (show $ serverTimeZone res)
     else return ()
   return res
 

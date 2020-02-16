@@ -1,4 +1,4 @@
-module Database.HDBC.ClickHouse.Protocol.Codec.Encoder (encodeString, encodeNum, encodeWord32) where
+module Database.HDBC.ClickHouse.Protocol.Codec.Encoder where
 
 import Data.Bits
 import Data.Word

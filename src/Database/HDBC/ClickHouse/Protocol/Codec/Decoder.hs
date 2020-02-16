@@ -1,11 +1,17 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Database.HDBC.ClickHouse.Protocol.Codec.Decoder where
 
 import Control.Exception
+import Data.Array.ST (newArray, readArray, MArray, STUArray)
+import Data.Array.Unsafe (castSTUArray)
 import Data.Bits
 import Data.Int
 import Data.List ((\\))
+import Data.Time
+import Data.Time.Clock.POSIX
 import Data.Word
 import Database.HDBC.ClickHouse.Exception
+import GHC.ST (runST, ST)
 import Network.Socket (Socket)
 import Network.Socket.ByteString (recv)
 
@@ -40,17 +46,75 @@ readBool sock = do
     [0] -> return False
     xs  -> throwIO $ unexpectedResponse "Bool" xs
 
+readInt8 :: Socket -> IO Int8
+readInt8 sock = do
+  bs <- recv sock 1
+  case (B.unpack bs) of
+    [n] -> return $ fromIntegral n
+    xs  -> throwIO $ unexpectedResponse "Int8" xs
+
+readInt16 :: Socket -> IO Int16
+readInt16 sock = readFixedNum sock 0 2
+
 readInt32 :: Socket -> IO Int32
-readInt32 sock = do
-  bs <- recv sock 4
-  let (i, _) =  B.foldl (\(n, s) b -> (n .|. ((fromIntegral b) `shiftL` s), s + 8)) (0::Int32, 0) bs
-  return i
+readInt32 sock = readFixedNum sock 0 4
+
+readInt64 :: Socket -> IO Int64
+readInt64 sock = readFixedNum sock 0 8
+
+readWord8 :: Socket -> IO Word8
+readWord8 sock = do
+  bs <- recv sock 1
+  case (B.unpack bs) of
+    [n] -> return n
+    xs  -> throwIO $ unexpectedResponse "Word8" xs
+
+readWord16 :: Socket -> IO Word16
+readWord16 sock = readFixedNum sock 0 2
+
+readWord32 :: Socket -> IO Word32
+readWord32 sock = readFixedNum sock 0 4
 
 readWord64 :: Socket -> IO Word64
-readWord64 sock = do
-  bs <- recv sock 8
-  let (i, _) =  B.foldl (\(n, s) b -> (n .|. ((fromIntegral b) `shiftL` s), s + 8)) (0::Word64, 0) bs
+readWord64 sock = readFixedNum sock 0 8
+
+readFixedNum :: (Num a, Bits a) => Socket -> a -> Int -> IO a
+readFixedNum sock zero size = do
+  bs <- recv sock size
+  let (i, _) =  B.foldl (\(n, s) b -> (n .|. ((fromIntegral b) `shiftL` s), s + 8)) (zero, 0) bs
   return i
+
+readFloat32 :: Socket -> IO Float
+readFloat32 sock = do
+  w32 <- readWord32 sock
+  return $ wordToFloat w32
+
+readFloat64 :: Socket -> IO Double
+readFloat64 sock = do
+  w64 <- readWord64 sock
+  return $ wordToDouble w64
+
+-- https://stackoverflow.com/a/7002812
+wordToFloat :: Word32 -> Float
+wordToFloat x = runST (cast x)
+
+wordToDouble :: Word64 -> Double
+wordToDouble x = runST (cast x)
+
+{-# INLINE cast #-}
+cast :: (MArray (STUArray s) a (ST s),
+         MArray (STUArray s) b (ST s)) => a -> ST s b
+cast x = newArray (0 :: Int, 0) x >>= castSTUArray >>= flip readArray 0
+
+readDate :: Socket -> IO UTCTime
+readDate sock = do
+  sec <- readInt16 sock
+  return $ posixSecondsToUTCTime $ (fromIntegral sec) * 24 * 3600
+
+readDateTime :: Socket -> IO UTCTime
+readDateTime sock = do
+  sec <- readInt32 sock
+  return $ posixSecondsToUTCTime $ fromIntegral sec
 
 readException :: Socket -> IO ClickHouseException
 readException sock = do

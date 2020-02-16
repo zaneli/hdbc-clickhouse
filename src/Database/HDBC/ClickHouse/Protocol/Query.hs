@@ -3,6 +3,7 @@ module Database.HDBC.ClickHouse.Protocol.Query (send) where
 import Control.Exception
 import Control.Monad
 import Data.Word
+import Database.HDBC.SqlValue
 import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll, recv)
 import Network.HostName
@@ -19,12 +20,11 @@ import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Client as Client
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Compression as Compression
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server
 
-send :: Socket -> String -> ServerInfo -> Config -> IO ()
+send :: Socket -> String -> ServerInfo -> Config -> IO [(Column, [SqlValue])]
 send sock query serverInfo config = do
   host <- getHostName
   request sock host query serverInfo
   response sock config
-  return ()
 
 request :: Socket -> String -> String -> ServerInfo -> IO ()
 request sock host query serverInfo =
@@ -84,18 +84,20 @@ stateComplete = 2
 ifaceTypeTCP :: Word8
 ifaceTypeTCP = 1
 
-response :: Socket -> Config -> IO ()
-response sock config = do
-  bs <- recv sock 1
-  case (B.unpack bs) of
-    [x] | x == Server.blockOfData -> (readBlock sock config) >>= (\_ -> response sock config)
-        | x == Server.profileInfo ->  (readProfileInfo sock config) >>= (\_ -> response sock config)
-        | x == Server.progress ->  (readProgress sock config) >>= (\_ -> response sock config)
-        | x == Server.exception -> (D.readException sock) >>= throwIO
-        | x == Server.endOfStream -> return ()
-    xs -> throwIO $ unexpectedPacketType xs
+response :: Socket -> Config -> IO [(Column, [SqlValue])]
+response sock config = response' sock config []
+  where
+    response' sock config values = do
+      bs <- recv sock 1
+      case (B.unpack bs) of
+        [x] | x == Server.blockOfData -> (readBlock sock config) >>= (\vs -> response' sock config $ values ++ vs)
+            | x == Server.profileInfo ->  (readProfileInfo sock config) >>= (\_ -> response' sock config values)
+            | x == Server.progress ->  (readProgress sock config) >>= (\_ -> response' sock config values)
+            | x == Server.exception -> (D.readException sock) >>= throwIO
+            | x == Server.endOfStream -> return values
+        xs -> throwIO $ unexpectedPacketType xs
 
-readBlock :: Socket -> Config -> IO ()
+readBlock :: Socket -> Config -> IO [(Column, [SqlValue])]
 readBlock sock config = do
   D.readString sock
 
@@ -113,15 +115,20 @@ readBlock sock config = do
     then printf "[Data] bucketNum=%d, numColumns=%d, numRows=%d\n" bucketNum numColumns numRows
     else return ()
 
-  columns <- mapM (\i -> readColumns sock) [1..numColumns]
+  columns <- mapM (\i -> readColumn sock numRows) [1..numColumns]
+  return columns
 
-  return ()
-
-readColumns :: Socket -> IO Column
-readColumns sock = do
+readColumn :: Socket -> Word64 -> IO (Column, [SqlValue])
+readColumn sock numRows = do
   columnName <- D.readString sock
   columnType <- D.readString sock
-  return Column { columnName = columnName, columnType = columnType }
+  let column = createColumn columnName columnType
+  values <- mapM (\i -> readRow sock column) [1..numRows]
+  return (column, values)
+
+readRow :: Socket -> Column -> IO SqlValue
+readRow sock column =
+  readValue sock column
 
 readProfileInfo :: Socket -> Config -> IO ()
 readProfileInfo sock config = do

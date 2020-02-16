@@ -13,9 +13,11 @@ description:         Please see the README on GitHub at <https://github.com/zane
 
 dependencies:
 - base >= 4.7 && < 5
+- array >= 0.5
 - bytestring >= 0.10
 - hostname >= 1.0
 - network >= 2.8
+- time >= 1.8
 - utf8-string >= 1.0
 - HDBC >= 2.2
 

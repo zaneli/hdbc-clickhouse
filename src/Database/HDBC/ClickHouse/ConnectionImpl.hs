@@ -1,9 +1,9 @@
 module Database.HDBC.ClickHouse.ConnectionImpl (Connection(..)) where
 
-import qualified Database.HDBC.Statement as Types
-import qualified Database.HDBC.Types as Types
-import Database.HDBC.ColTypes as ColTypes
 import Control.Monad
+
+import qualified Database.HDBC.Types as Types
+import qualified Database.HDBC.ColTypes as ColTypes
 
 data Connection =
   Connection {

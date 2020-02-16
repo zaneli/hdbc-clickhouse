@@ -7,6 +7,7 @@ import Control.Exception
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString (sendAll)
 import Database.HDBC.ClickHouse.Protocol
+import Database.HDBC.ColTypes
 
 import qualified Data.ByteString as B
 import qualified Database.HDBC.ClickHouse.ConnectionImpl as Impl
@@ -36,8 +37,8 @@ mkConn config = do
     Impl.proxiedClientVer = clientVer,
     Impl.dbTransactionSupport = True,
     Impl.dbServerVer = serverVersion serverInfo,
-    Impl.getTables = fgetTables sock config,
-    Impl.describeTable = fdescribeTable sock config,
+    Impl.getTables = fgetTables sock serverInfo config,
+    Impl.describeTable = fdescribeTable sock serverInfo config,
     Impl.ping = fping sock
   }
 
@@ -76,11 +77,15 @@ frunRaw sock serverInfo config sql = do
   Query.send sock sql serverInfo config
   return ()
 
+fprepare :: Socket -> Config -> String -> IO Statement
 fprepare sock config sql =
   throwIO $ userError "not implemented"
 
-fgetTables sock config =
-  throwIO $ userError "not implemented"
+fgetTables :: Socket -> ServerInfo -> Config -> IO [String]
+fgetTables sock serverInfo config = do
+  tables <- Query.send sock "show tables" serverInfo config
+  return $ concat $ map (\(_, (vs)) -> (map fromSql vs)) tables
 
-fdescribeTable sock config sql =
+fdescribeTable :: Socket -> ServerInfo -> Config -> String -> IO [(String, SqlColDesc)]
+fdescribeTable sock serverInfo config sql =
   throwIO $ userError "not implemented"

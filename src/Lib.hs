@@ -11,7 +11,9 @@ someFunc = do
   c <- connectClickHouse config
   pong <- ping c
   print pong
+  tables <- getTables c
+  print tables
   r <- runRaw c "select * from test_tbl"
   print r
-  runRaw c "select * from test_tbl"
+  r <- runRaw c "select * from test_tbl"
   print r

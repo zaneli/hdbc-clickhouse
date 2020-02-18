@@ -27,6 +27,16 @@ readString sock = do
     else recv sock $ fromIntegral size
   return $ C.decodeString $ B8.unpack bs
 
+readFixedString :: Socket -> Int -> IO String
+readFixedString sock size = do
+  bs <- if size == 0
+    then return B.empty
+    else recv sock size
+  return $ C.decodeString $ B8.unpack $ B.map replaceNULToEmptyChar bs
+    where
+      replaceNULToEmptyChar 0 = 32
+      replaceNULToEmptyChar x = x
+
 readNum :: Socket -> IO Word64
 readNum sock = readNum' sock 0 0
   where

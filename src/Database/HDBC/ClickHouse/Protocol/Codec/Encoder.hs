@@ -24,4 +24,4 @@ encodeNum num =
 
 encodeWord32 :: Word32 -> B.ByteString
 encodeWord32 w32 =
-  L.toStrict $ Builder.toLazyByteString  $ Builder.word32BE w32
+  L.toStrict $ Builder.toLazyByteString $ Builder.word32BE w32

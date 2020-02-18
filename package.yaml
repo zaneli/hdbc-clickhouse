@@ -17,6 +17,7 @@ dependencies:
 - bytestring >= 0.10
 - hostname >= 1.0
 - network >= 2.8
+- iproute >= 1.7
 - time >= 1.8
 - utf8-string >= 1.0
 - HDBC >= 2.2

@@ -1,8 +1,8 @@
 module Database.HDBC.ClickHouse
     (
-      connectClickHouse, Config(..), Connection(), ping
+      connectClickHouse, Config(..), Connection(), defaultJoinSqlValues, ping
     )
   where
 
 import Database.HDBC.ClickHouse.Connection (connectClickHouse, Connection(), ping)
-import Database.HDBC.ClickHouse.Protocol (Config(..))
+import Database.HDBC.ClickHouse.Protocol (Config(..), defaultJoinSqlValues)

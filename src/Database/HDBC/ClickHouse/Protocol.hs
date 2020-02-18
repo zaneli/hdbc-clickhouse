@@ -1,13 +1,20 @@
 module Database.HDBC.ClickHouse.Protocol where
 
+import Data.List (intercalate)
+import Database.HDBC.SqlValue
+
 data Config = Config {
   host :: String,
   port :: Int,
   database :: String,
   username :: String,
   password :: String,
-  debug :: Bool
-} deriving Show
+  debug :: Bool,
+  joinSqlValues :: [SqlValue] -> SqlValue
+}
+
+defaultJoinSqlValues :: [SqlValue] -> SqlValue
+defaultJoinSqlValues = toSql . intercalate "," . map fromSql
 
 data ClientInfo = ClientInfo {
   clientName :: String,

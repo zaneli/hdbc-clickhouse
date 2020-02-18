@@ -115,20 +115,16 @@ readBlock sock config = do
     then printf "[Data] bucketNum=%d, numColumns=%d, numRows=%d\n" bucketNum numColumns numRows
     else return ()
 
-  columns <- mapM (\i -> readColumn sock numRows) [1..numColumns]
+  columns <- mapM (\i -> readColumn sock config $ fromIntegral numRows) [1..numColumns]
   return columns
 
-readColumn :: Socket -> Word64 -> IO (Column, [SqlValue])
-readColumn sock numRows = do
+readColumn :: Socket -> Config -> Int -> IO (Column, [SqlValue])
+readColumn sock config numRows = do
   columnName <- D.readString sock
   columnType <- D.readString sock
   let column = createColumn columnName columnType
-  values <- mapM (\i -> readRow sock column) [1..numRows]
+  values <- readValue sock column config numRows
   return (column, values)
-
-readRow :: Socket -> Column -> IO SqlValue
-readRow sock column =
-  readValue sock column
 
 readProfileInfo :: Socket -> Config -> IO ()
 readProfileInfo sock config = do

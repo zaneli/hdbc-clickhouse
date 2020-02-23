@@ -1,5 +1,6 @@
 module Database.HDBC.ClickHouse.Connection (connectClickHouse, Impl.Connection(), Impl.ping) where
 
+import Data.List (find)
 import Database.HDBC
 import Database.HDBC.Types
 import Database.HDBC.DriverUtils
@@ -7,6 +8,7 @@ import Control.Exception
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString (sendAll)
 import Database.HDBC.ClickHouse.Protocol
+import Database.HDBC.ClickHouse.Protocol.Data
 import Database.HDBC.ColTypes
 
 import qualified Data.ByteString as B
@@ -87,5 +89,15 @@ fgetTables sock serverInfo config = do
   return $ concat $ map (\(_, (vs)) -> (map fromSql vs)) tables
 
 fdescribeTable :: Socket -> ServerInfo -> Config -> String -> IO [(String, SqlColDesc)]
-fdescribeTable sock serverInfo config sql =
-  throwIO $ userError "not implemented"
+fdescribeTable sock serverInfo config table = do
+  desc <- Query.send sock ("desc " ++ table) serverInfo config
+  let names = find (\(column, values) -> (columnName column == "name") && (not $ null values)) desc
+  let types = find (\(column, values) -> (columnName column == "type") && (not $ null values)) desc
+  case (names, types) of
+    (Just ns, Just ts) -> return $ map f $ zip (map fromSql (snd ns)) $ snd ts
+    _ -> throwIO $ userError "table metadata not found"
+  where
+    f (name, typ) =
+      let column = createColumn name $ fromSql typ
+          desc   = getSqlColDesc column
+      in (name, desc)

@@ -2,12 +2,13 @@ module Database.HDBC.ClickHouse.Protocol.Data where
 
 import Data.Bits
 import Data.IP
-import Data.List (isPrefixOf, isSuffixOf, unfoldr)
+import Data.List (intersperse, isPrefixOf, isSuffixOf, unfoldr)
 import Data.Time
 import Data.Word
 import Database.HDBC.SqlValue
 import Database.HDBC.ClickHouse.Protocol
 import Network.Socket (Socket)
+import Numeric (showHex)
 
 import qualified Data.ByteString as B
 import qualified Database.HDBC.ClickHouse.Protocol.Codec.Decoder as D
@@ -38,6 +39,8 @@ data Column = StringColumn {
     columnName :: String
 } | DateTimeColumn {
     columnName :: String
+} | UUIDColumn {
+    columnName :: String
 } | IPv4Column {
     columnName :: String
 } | IPv6Column {
@@ -67,6 +70,7 @@ createColumn name "Float32"  = Float32Column { columnName = name }
 createColumn name "Float64"  = Float64Column { columnName = name }
 createColumn name "Date"     = DateColumn { columnName = name }
 createColumn name "DateTime" = DateTimeColumn { columnName = name }
+createColumn name "UUID"     = UUIDColumn { columnName = name }
 createColumn name "IPv4"     = IPv4Column { columnName = name }
 createColumn name "IPv6"     = IPv6Column { columnName = name }
 createColumn name typ | isPrefixOf "FixedString(" typ && isSuffixOf ")" typ =
@@ -113,6 +117,15 @@ readValue sock (DateTimeColumn _) _ numRows =
   readEachValue numRows $ fmap toSql $ D.readDateTime sock -- TODO: timezone
 readValue sock (FixedStringColumn _ size) _ numRows =
   readEachValue numRows $ fmap toSql $ D.readFixedString sock size
+readValue sock (UUIDColumn _) _ numRows =
+  readEachValue numRows read
+    where
+      read = do
+        bytes <- mapM (\_ -> fmap fromIntegral $ D.readWord8 sock) [1..16]
+        let uuids = map (foldl (\s i -> pad '0' $ showHex (bytes !! i) s) "") $
+                        [[4..7],[2,3],[0,1],[14,15],[8..13]]
+        return $ toSql $ concat $ intersperse "-" uuids
+      pad p s = if (length s `mod` 2) == 0 then s else (p:s)
 readValue sock (IPv4Column _) _ numRows =
   readEachValue numRows read
     where

@@ -288,7 +288,8 @@ readValue sock (IPv6Column _) _ numRows =
       f (x:y:zs) = Just ((x `shiftL` 8) .|. y, zs)
       f _        = Nothing
 readValue sock (ArrayColumn _ itemType) config numRows = do
-  offsets <- mapM (\_ -> fmap fromIntegral $ D.readWord64 sock) [1..numRows]
+  offsetSum <- mapM (\_ -> fmap fromIntegral $ D.readWord64 sock) [1..numRows]
+  let offsets = zipWith (-) offsetSum $ (0:offsetSum)
   fmap (map $ joinSqlValues config) $ mapM (\offset -> readValue sock itemType config offset) offsets
 readValue sock (NullableColumn _ itemType) config numRows = do
   isNulls <- mapM (\_ -> D.readBool sock) [1..numRows]

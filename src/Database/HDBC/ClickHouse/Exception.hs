@@ -11,6 +11,8 @@ data ClickHouseException = ServerException {
   message :: String,
   stackTrace :: String,
   nested :: Maybe ClickHouseException
+} | ClientException {
+  message :: String
 } | UnexpectedPacketTypeException {
   packets :: [Word8]
 } | UnexpectedResponseException {
@@ -23,6 +25,8 @@ instance Show ClickHouseException where
           "ServerException {code = " ++ (show code)
             ++ ", name = \"" ++ name
             ++ "\", message = \"" ++ message ++ "\"}"
+  show (ClientException message) =
+          "ClientException {message = \"" ++ message ++ "\"}"
   show (UnexpectedPacketTypeException packets) =
           "UnexpectedPacketTypeException {message = \"Unexpected Packet Type: " ++ (show packets) ++ "\"}"
   show (UnexpectedResponseException dataType packets) =

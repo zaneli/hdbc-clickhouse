@@ -89,20 +89,21 @@ stateComplete = 2
 ifaceTypeTCP :: Word8
 ifaceTypeTCP = 1
 
-response :: Socket -> Config -> MVar [[SqlValue]] -> IO (Maybe [SqlValue])
-response sock config buffer = do
-  values <- tryTakeMVar buffer
+response :: Socket -> Config -> MVar [Column] -> MVar [[SqlValue]] -> IO (Maybe [SqlValue])
+response sock config mColumns mValues = do
+  values <- tryTakeMVar mValues
   case values of
     Just (v:vs) -> do
-      putMVar buffer vs
+      putMVar mValues vs
       return $ Just v
     _ -> do
+      tryTakeMVar mColumns
       bs <- recv sock 1
       case (B.unpack bs) of
-        [x] | x == Server.blockOfData -> updateBuffer sock config buffer
-            | x == Server.profileInfo ->  (readProfileInfo sock config) >>= (\_ -> response sock config buffer)
-            | x == Server.progress ->  (readProgress sock config) >>= (\_ -> response sock config buffer)
-            | x == Server.exception -> (D.readException sock) >>= throwIO
+        [x] | x == Server.blockOfData -> readFromSocket sock config mColumns mValues
+            | x == Server.profileInfo ->  (readProfileInfo sock config) >>= (\_ -> response sock config mColumns mValues)
+            | x == Server.progress    ->  (readProgress sock config) >>= (\_ -> response sock config mColumns mValues)
+            | x == Server.exception   -> (D.readException sock) >>= throwIO
             | x == Server.endOfStream -> return Nothing
         xs -> throwIO $ unexpectedPacketType xs
 
@@ -114,13 +115,13 @@ response' sock config = fetch sock config []
       case (B.unpack bs) of
         [x] | x == Server.blockOfData -> (readBlock sock config) >>= (\vs -> fetch sock config $ values ++ vs)
             | x == Server.profileInfo ->  (readProfileInfo sock config) >>= (\_ -> fetch sock config values)
-            | x == Server.progress ->  (readProgress sock config) >>= (\_ -> fetch sock config values)
-            | x == Server.exception -> (D.readException sock) >>= throwIO
+            | x == Server.progress    ->  (readProgress sock config) >>= (\_ -> fetch sock config values)
+            | x == Server.exception   -> (D.readException sock) >>= throwIO
             | x == Server.endOfStream -> return values
         xs -> throwIO $ unexpectedPacketType xs
 
-updateBuffer :: Socket -> Config -> MVar [[SqlValue]] -> IO (Maybe [SqlValue])
-updateBuffer sock config buffer = do
+readFromSocket :: Socket -> Config -> MVar [Column] -> MVar [[SqlValue]] -> IO (Maybe [SqlValue])
+readFromSocket sock config mColumns mValues = do
   D.readString sock
 
   -- block info
@@ -137,9 +138,10 @@ updateBuffer sock config buffer = do
     then printf "[Data] bucketNum=%d, numColumns=%d, numRows=%d\n" bucketNum numColumns numRows
     else return ()
 
-  columns <- mapM (\i -> readColumn sock config $ fromIntegral numRows) [1..numColumns]
-  putMVar buffer $ transpose $ map (\(_, values) -> values) columns
-  response sock config buffer
+  (columns, values) <- fmap unzip $ mapM (\i -> readColumn sock config $ fromIntegral numRows) [1..numColumns]
+  putMVar mColumns columns
+  putMVar mValues $ transpose values
+  response sock config mColumns mValues
 
 readBlock :: Socket -> Config -> IO [(Column, [SqlValue])]
 readBlock sock config = do

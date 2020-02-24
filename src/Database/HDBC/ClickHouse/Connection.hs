@@ -1,15 +1,13 @@
 module Database.HDBC.ClickHouse.Connection (connectClickHouse, Impl.Connection(), Impl.ping) where
 
 import Control.Exception
-import Data.List (find)
+import Data.List (findIndex)
 import Database.HDBC
-import Database.HDBC.Types
-import Database.HDBC.DriverUtils
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
-import Network.Socket.ByteString (sendAll)
 import Database.HDBC.ClickHouse.Data
 import Database.HDBC.ClickHouse.Data.ColDesc
 import Database.HDBC.ClickHouse.Data.Creation
+import Database.HDBC.ClickHouse.Exception
 import Database.HDBC.ClickHouse.Protocol
 import Database.HDBC.ColTypes
 
@@ -84,19 +82,18 @@ frunRaw sock serverInfo config sql = do
 
 fgetTables :: Socket -> ServerInfo -> Config -> IO [String]
 fgetTables sock serverInfo config = do
-  tables <- Query.send sock "show tables" serverInfo config
-  return $ concat $ map (\(_, (vs)) -> (map fromSql vs)) tables
+  (columns, values) <- Query.send sock "show tables" serverInfo config
+  return $ concatMap (map fromSql) values
 
 fdescribeTable :: Socket -> ServerInfo -> Config -> String -> IO [(String, SqlColDesc)]
 fdescribeTable sock serverInfo config table = do
-  desc <- Query.send sock ("desc " ++ table) serverInfo config
-  let names = find (\(column, values) -> (columnName column == "name") && (not $ null values)) desc
-  let types = find (\(column, values) -> (columnName column == "type") && (not $ null values)) desc
-  case (names, types) of
-    (Just ns, Just ts) -> return $ map f $ zip (map fromSql (snd ns)) $ snd ts
-    _ -> throwIO $ userError "table metadata not found"
+  (columns, values) <- Query.send sock ("desc " ++ table) serverInfo config
+  case (findIndex (\c -> columnName c == "name") columns, findIndex (\c -> columnName c == "type") columns) of
+    (Just nameIdx, Just typeIdx) ->
+      return $ map (\v -> f (fromSql $ v !! nameIdx) (fromSql $ v !! typeIdx)) values
+    _ -> throwIO $ ClientException "table metadata not found"
   where
-    f (name, typ) =
-      let column = createColumn name $ fromSql typ
+    f name typ =
+      let column = createColumn name typ
           desc   = getSqlColDesc column
       in (name, desc)

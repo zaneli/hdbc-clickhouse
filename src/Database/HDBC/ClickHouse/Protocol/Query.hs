@@ -1,7 +1,9 @@
-module Database.HDBC.ClickHouse.Protocol.Query (send) where
+module Database.HDBC.ClickHouse.Protocol.Query (send, request, response) where
 
+import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad
+import Data.List (transpose)
 import Data.Word
 import Database.HDBC.SqlValue
 import Network.Socket (Socket)
@@ -22,12 +24,15 @@ import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server
 
 send :: Socket -> String -> ServerInfo -> Config -> IO [(Column, [SqlValue])]
 send sock query serverInfo config = do
-  host <- getHostName
-  request sock host query serverInfo
-  response sock config
+  request sock query serverInfo
+  response' sock config
 
-request :: Socket -> String -> String -> ServerInfo -> IO ()
-request sock host query serverInfo =
+request sock query serverInfo = do
+  host <- getHostName
+  request' sock host query serverInfo
+
+request' :: Socket -> String -> String -> ServerInfo -> IO ()
+request' sock host query serverInfo =
   sendAll sock $ B8.concat [
       B.singleton Client.query,
       E.encodeString "",
@@ -84,18 +89,57 @@ stateComplete = 2
 ifaceTypeTCP :: Word8
 ifaceTypeTCP = 1
 
-response :: Socket -> Config -> IO [(Column, [SqlValue])]
-response sock config = response' sock config []
-  where
-    response' sock config values = do
+response :: Socket -> Config -> MVar [[SqlValue]] -> IO (Maybe [SqlValue])
+response sock config buffer = do
+  values <- tryTakeMVar buffer
+  case values of
+    Just (v:vs) -> do
+      putMVar buffer vs
+      return $ Just v
+    _ -> do
       bs <- recv sock 1
       case (B.unpack bs) of
-        [x] | x == Server.blockOfData -> (readBlock sock config) >>= (\vs -> response' sock config $ values ++ vs)
-            | x == Server.profileInfo ->  (readProfileInfo sock config) >>= (\_ -> response' sock config values)
-            | x == Server.progress ->  (readProgress sock config) >>= (\_ -> response' sock config values)
+        [x] | x == Server.blockOfData -> updateBuffer sock config buffer
+            | x == Server.profileInfo ->  (readProfileInfo sock config) >>= (\_ -> response sock config buffer)
+            | x == Server.progress ->  (readProgress sock config) >>= (\_ -> response sock config buffer)
+            | x == Server.exception -> (D.readException sock) >>= throwIO
+            | x == Server.endOfStream -> return Nothing
+        xs -> throwIO $ unexpectedPacketType xs
+
+response' :: Socket -> Config -> IO [(Column, [SqlValue])]
+response' sock config = fetch sock config []
+  where
+    fetch sock config values = do
+      bs <- recv sock 1
+      case (B.unpack bs) of
+        [x] | x == Server.blockOfData -> (readBlock sock config) >>= (\vs -> fetch sock config $ values ++ vs)
+            | x == Server.profileInfo ->  (readProfileInfo sock config) >>= (\_ -> fetch sock config values)
+            | x == Server.progress ->  (readProgress sock config) >>= (\_ -> fetch sock config values)
             | x == Server.exception -> (D.readException sock) >>= throwIO
             | x == Server.endOfStream -> return values
         xs -> throwIO $ unexpectedPacketType xs
+
+updateBuffer :: Socket -> Config -> MVar [[SqlValue]] -> IO (Maybe [SqlValue])
+updateBuffer sock config buffer = do
+  D.readString sock
+
+  -- block info
+  num1 <- D.readNum sock
+  isOverflows <- D.readBool sock
+  num2 <- D.readNum sock
+  bucketNum <- D.readInt32 sock
+  num3 <- D.readNum sock
+
+  numColumns <- D.readNum sock
+  numRows <- D.readNum sock
+
+  if (debug config)
+    then printf "[Data] bucketNum=%d, numColumns=%d, numRows=%d\n" bucketNum numColumns numRows
+    else return ()
+
+  columns <- mapM (\i -> readColumn sock config $ fromIntegral numRows) [1..numColumns]
+  putMVar buffer $ transpose $ map (\(_, values) -> values) columns
+  response sock config buffer
 
 readBlock :: Socket -> Config -> IO [(Column, [SqlValue])]
 readBlock sock config = do

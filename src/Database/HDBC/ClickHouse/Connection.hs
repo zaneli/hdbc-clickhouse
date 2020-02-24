@@ -1,10 +1,10 @@
 module Database.HDBC.ClickHouse.Connection (connectClickHouse, Impl.Connection(), Impl.ping) where
 
+import Control.Exception
 import Data.List (find)
 import Database.HDBC
 import Database.HDBC.Types
 import Database.HDBC.DriverUtils
-import Control.Exception
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString (sendAll)
 import Database.HDBC.ClickHouse.Protocol
@@ -13,6 +13,7 @@ import Database.HDBC.ColTypes
 
 import qualified Data.ByteString as B
 import qualified Database.HDBC.ClickHouse.ConnectionImpl as Impl
+import qualified Database.HDBC.ClickHouse.Statement as Stmt
 import qualified Database.HDBC.ClickHouse.Protocol.Hello as Hello
 import qualified Database.HDBC.ClickHouse.Protocol.Ping as Ping
 import qualified Database.HDBC.ClickHouse.Protocol.Query as Query
@@ -31,7 +32,7 @@ mkConn config = do
     Impl.rollback = frollback,
     Impl.run = frun sock,
     Impl.runRaw = frunRaw sock serverInfo config,
-    Impl.prepare = fprepare sock config,
+    Impl.prepare = Stmt.fprepare sock serverInfo config,
     Impl.clone = connectClickHouse config,
     Impl.hdbcDriverName = "clickhouse",
     Impl.hdbcClientVer = clientVer,
@@ -64,24 +65,20 @@ fclose sock = close sock
 
 fcommit :: IO ()
 fcommit =
-  throwIO $ userError "not implemented"
+  throwIO $ userError "fcommit not implemented"
 
 frollback :: IO ()
 frollback =
-  throwIO $ userError "not implemented"
+  throwIO $ userError "frollback not implemented"
 
 frun :: Socket -> String -> [SqlValue] -> IO Integer
 frun sock sql args =
-  throwIO $ userError "not implemented"
+  throwIO $ userError "frun not implemented"
 
 frunRaw :: Socket -> ServerInfo -> Config -> String -> IO ()
 frunRaw sock serverInfo config sql = do
   Query.send sock sql serverInfo config
   return ()
-
-fprepare :: Socket -> Config -> String -> IO Statement
-fprepare sock config sql =
-  throwIO $ userError "not implemented"
 
 fgetTables :: Socket -> ServerInfo -> Config -> IO [String]
 fgetTables sock serverInfo config = do

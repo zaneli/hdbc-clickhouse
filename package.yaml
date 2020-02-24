@@ -1,5 +1,5 @@
 name:                hdbc-clickhouse
-version:             0.1.0.0
+version:             0.0.1.0
 github:              "zaneli/hdbc-clickhouse"
 license:             BSD3
 author:              "zaneli"
@@ -23,18 +23,8 @@ dependencies:
 - HDBC >= 2.2
 
 library:
-  source-dirs: src
-
-executables:
-  hdbc-clickhouse-exe:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - hdbc-clickhouse
+  source-dirs:     src
+  exposed-modules: Database.HDBC.ClickHouse
 
 tests:
   hdbc-clickhouse-test:

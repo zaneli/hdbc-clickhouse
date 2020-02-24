@@ -7,8 +7,10 @@ import Database.HDBC.Types
 import Database.HDBC.DriverUtils
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString (sendAll)
+import Database.HDBC.ClickHouse.Data
+import Database.HDBC.ClickHouse.Data.ColDesc
+import Database.HDBC.ClickHouse.Data.Creation
 import Database.HDBC.ClickHouse.Protocol
-import Database.HDBC.ClickHouse.Protocol.Data
 import Database.HDBC.ColTypes
 
 import qualified Data.ByteString as B

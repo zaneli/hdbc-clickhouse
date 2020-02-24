@@ -9,9 +9,11 @@ import Database.HDBC.SqlValue
 import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll, recv)
 import Network.HostName
+import Database.HDBC.ClickHouse.Data
+import Database.HDBC.ClickHouse.Data.Creation
+import Database.HDBC.ClickHouse.Data.Reader
 import Database.HDBC.ClickHouse.Exception
 import Database.HDBC.ClickHouse.Protocol
-import Database.HDBC.ClickHouse.Protocol.Data
 import Text.Printf
 
 import qualified Data.ByteString as B

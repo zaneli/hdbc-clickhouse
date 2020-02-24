@@ -259,10 +259,18 @@ readValue sock (UUIDColumn _) _ numRows =
     where
       read = do
         bytes <- mapM (\_ -> fmap fromIntegral $ D.readWord8 sock) [1..16]
-        let uuids = map (foldl (\s i -> pad '0' $ showHex (bytes !! i) s) "") $
-                        [[4..7],[2,3],[0,1],[14,15],[8..13]]
-        return $ toSql $ concat $ intersperse "-" uuids
-      pad p s = if (length s `mod` 2) == 0 then s else (p:s)
+        let uuids = foldl toUUID ("", "", "", "", "") $ zip bytes [0..]
+        return $ toSql $ concat $ intersperse "-" $ tapleTolist uuids
+      toUUID (uuid1, uuid2, uuid3, uuid4, uuid5) (byte, index)
+        | index >= 4  && index <= 7  = (toHex byte uuid1, uuid2, uuid3, uuid4, uuid5)
+        | index >= 2  && index <= 3  = (uuid1, toHex byte uuid2, uuid3, uuid4, uuid5)
+        | index >= 0  && index <= 1  = (uuid1, uuid2, toHex byte uuid3, uuid4, uuid5)
+        | index >= 14 && index <= 15 = (uuid1, uuid2, uuid3, toHex byte uuid4, uuid5)
+        | index >= 8  && index <= 13 = (uuid1, uuid2, uuid3, uuid4, toHex byte uuid5)
+      toHex b s
+        | b <= 15   = '0' : (showHex b s)
+        | otherwise = showHex b s
+      tapleTolist (uuid1, uuid2, uuid3, uuid4, uuid5) = [uuid1, uuid2, uuid3, uuid4, uuid5]
 readValue sock (IPv4Column _) _ numRows =
   readEachValue numRows read
     where

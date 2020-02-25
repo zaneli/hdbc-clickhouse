@@ -1,7 +1,7 @@
 module Database.HDBC.ClickHouse.Data.Creation (createColumn) where
 
 import Data.List (isPrefixOf, isSuffixOf)
-import Database.HDBC.ClickHouse.Data
+import Database.HDBC.ClickHouse.Data.Column
 
 createColumn :: String -> String -> Column
 createColumn name "String"   = StringColumn { columnName = name }

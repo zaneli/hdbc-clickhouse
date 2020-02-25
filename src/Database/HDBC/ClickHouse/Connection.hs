@@ -5,8 +5,6 @@ import Data.List (findIndex)
 import Database.HDBC
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Database.HDBC.ClickHouse.Data
-import Database.HDBC.ClickHouse.Data.ColDesc
-import Database.HDBC.ClickHouse.Data.Creation
 import Database.HDBC.ClickHouse.Exception
 import Database.HDBC.ClickHouse.Protocol
 import Database.HDBC.ColTypes

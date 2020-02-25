@@ -1,7 +1,7 @@
 module Database.HDBC.ClickHouse.Data.ColDesc (getSqlColDesc) where
 
 import Database.HDBC.ColTypes
-import Database.HDBC.ClickHouse.Data
+import Database.HDBC.ClickHouse.Data.Column
 
 getSqlColDesc :: Column -> SqlColDesc
 getSqlColDesc (StringColumn _) = SqlColDesc {

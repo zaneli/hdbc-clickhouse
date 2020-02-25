@@ -5,7 +5,6 @@ import Control.Exception
 import Database.HDBC
 import Database.HDBC.Statement
 import Database.HDBC.ClickHouse.Data
-import Database.HDBC.ClickHouse.Data.ColDesc
 import Database.HDBC.ClickHouse.Exception
 import Database.HDBC.ClickHouse.Protocol
 import Network.Socket hiding (send, sendTo, recv, recvFrom)

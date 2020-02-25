@@ -5,7 +5,7 @@ import Data.IP
 import Data.List (intersperse, unfoldr)
 import Data.Word
 import Database.HDBC.SqlValue
-import Database.HDBC.ClickHouse.Data
+import Database.HDBC.ClickHouse.Data.Column
 import Database.HDBC.ClickHouse.Protocol
 import Network.Socket (Socket)
 import Numeric (showHex)

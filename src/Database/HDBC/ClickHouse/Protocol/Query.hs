@@ -17,8 +17,8 @@ import Text.Printf
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
-import qualified Database.HDBC.ClickHouse.Protocol.Codec.Encoder as E
-import qualified Database.HDBC.ClickHouse.Protocol.Codec.Decoder as D
+import qualified Database.HDBC.ClickHouse.Codec.Encoder as E
+import qualified Database.HDBC.ClickHouse.Codec.Decoder as D
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Client as Client
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Compression as Compression
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server

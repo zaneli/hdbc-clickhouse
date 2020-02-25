@@ -1,16 +1,16 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Database.HDBC.ClickHouse.Protocol.Codec.Decoder where
+module Database.HDBC.ClickHouse.Codec.Decoder where
 
-import Control.Exception
+import Control.Exception (throwIO)
 import Data.Array.ST (newArray, readArray, MArray, STUArray)
 import Data.Array.Unsafe (castSTUArray)
-import Data.Bits
-import Data.Int
+import Data.Bits (Bits, shiftL, (.&.), (.|.))
+import Data.Int (Int8, Int16, Int32, Int64)
 import Data.List ((\\))
-import Data.Time
-import Data.Time.Clock.POSIX
-import Data.Word
-import Database.HDBC.ClickHouse.Exception
+import Data.Time (UTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Word (Word8, Word16, Word32, Word64)
+import Database.HDBC.ClickHouse.Exception (ClickHouseException(..), unexpectedResponse)
 import GHC.ST (runST, ST)
 import Network.Socket (Socket)
 import Network.Socket.ByteString (recv)

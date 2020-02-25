@@ -7,7 +7,7 @@ import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll, recv)
 
 import qualified Data.ByteString as B
-import qualified Database.HDBC.ClickHouse.Protocol.Codec.Decoder as D
+import qualified Database.HDBC.ClickHouse.Codec.Decoder as D
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Client as Client
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server
 

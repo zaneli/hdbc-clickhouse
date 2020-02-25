@@ -10,7 +10,7 @@ import Database.HDBC.ClickHouse.Protocol
 import Network.Socket (Socket)
 import Numeric (showHex)
 
-import qualified Database.HDBC.ClickHouse.Protocol.Codec.Decoder as D
+import qualified Database.HDBC.ClickHouse.Codec.Decoder as D
 
 readValue :: Socket -> Column -> Config -> Int -> IO [SqlValue]
 readValue sock (StringColumn _) _ numRows =

@@ -1,7 +1,7 @@
-module Database.HDBC.ClickHouse.Protocol.Codec.Encoder where
+module Database.HDBC.ClickHouse.Codec.Encoder where
 
-import Data.Bits
-import Data.Word
+import Data.Bits (Bits, shiftR, (.|.))
+import Data.Word (Word32)
 
 import qualified Codec.Binary.UTF8.String as C
 import qualified Data.ByteString as B

@@ -8,7 +8,6 @@ import Data.Word
 import Database.HDBC.SqlValue
 import Network.Socket (Socket)
 import Network.Socket.ByteString (sendAll, recv)
-import Network.HostName
 import Database.HDBC.ClickHouse.Data
 import Database.HDBC.ClickHouse.Data.Creation
 import Database.HDBC.ClickHouse.Data.Reader
@@ -24,9 +23,9 @@ import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Client as Client
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Compression as Compression
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server
 
-send :: Socket -> String -> ServerInfo -> Config -> IO ([Column], [[SqlValue]])
-send sock query serverInfo config = do
-  request sock query serverInfo
+send :: Socket -> String -> ClientInfo -> ServerInfo -> Config -> IO ([Column], [[SqlValue]])
+send sock query clientInfo serverInfo config = do
+  request sock query clientInfo serverInfo
 
   mColumns <- newEmptyMVar
   mValues <- newEmptyMVar
@@ -41,12 +40,8 @@ send sock query serverInfo config = do
           Just x  -> do remainder <- fetchAllRows mColumns mValues
                         return (x : remainder)
 
-request sock query serverInfo = do
-  host <- getHostName
-  request' sock host query serverInfo
-
-request' :: Socket -> String -> String -> ServerInfo -> IO ()
-request' sock host query serverInfo =
+request :: Socket -> String -> ClientInfo -> ServerInfo -> IO ()
+request sock query clientInfo serverInfo = do
   sendAll sock $ B8.concat [
       B.singleton Client.query,
       E.encodeString "",
@@ -55,8 +50,8 @@ request' sock host query serverInfo =
       E.encodeString "",
       E.encodeString "[::ffff:127.0.0.1]:0",
       E.encodeNum ifaceTypeTCP,
-      E.encodeString host,
-      E.encodeString host,
+      E.encodeString $ clientHost clientInfo,
+      E.encodeString $ clientHost clientInfo,
       E.encodeString $ clientName clientInfo,
       E.encodeNum $ clientMajorVersion clientInfo,
       E.encodeNum $ clientMinorVersion clientInfo,

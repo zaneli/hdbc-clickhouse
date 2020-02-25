@@ -12,13 +12,13 @@ import Network.Socket hiding (send, sendTo, recv, recvFrom)
 
 import qualified Database.HDBC.ClickHouse.Protocol.Query as Query
 
-fprepare :: Socket -> ServerInfo -> Config -> String -> IO Statement
-fprepare sock serverInfo config sql = do
+fprepare :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> IO Statement
+fprepare sock clientInfo serverInfo config sql = do
   mColumns <- newEmptyMVar
   mValues <- newEmptyMVar
   return Statement {
-    execute = fexecute sock serverInfo sql,
-    executeRaw = fexecuteRaw sock serverInfo sql,
+    execute = fexecute sock clientInfo serverInfo sql,
+    executeRaw = fexecuteRaw sock clientInfo serverInfo sql,
     executeMany = fexecuteMany sock,
     finish = ffinish mColumns mValues,
     fetchRow = ffetchRow sock config mColumns mValues,
@@ -27,14 +27,14 @@ fprepare sock serverInfo config sql = do
     describeResult = fdescribeResult mColumns
   }
 
-fexecute :: Socket -> ServerInfo -> String -> [SqlValue] -> IO Integer
-fexecute sock serverInfo sql value = do
-  Query.request sock sql serverInfo
+fexecute :: Socket -> ClientInfo -> ServerInfo -> String -> [SqlValue] -> IO Integer
+fexecute sock clientInfo serverInfo sql value = do
+  Query.request sock sql clientInfo serverInfo
   return 1
 
-fexecuteRaw :: Socket -> ServerInfo -> String -> IO ()
-fexecuteRaw sock serverInfo sql =
-  Query.request sock sql serverInfo
+fexecuteRaw :: Socket -> ClientInfo -> ServerInfo -> String -> IO ()
+fexecuteRaw sock clientInfo serverInfo sql =
+  Query.request sock sql clientInfo serverInfo
 
 fexecuteMany :: Socket -> [[SqlValue]] -> IO ()
 fexecuteMany sock mValues = do

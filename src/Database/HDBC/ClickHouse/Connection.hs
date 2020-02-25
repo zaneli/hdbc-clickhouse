@@ -10,6 +10,7 @@ import Database.HDBC.ClickHouse.Data.Creation
 import Database.HDBC.ClickHouse.Exception
 import Database.HDBC.ClickHouse.Protocol
 import Database.HDBC.ColTypes
+import Network.HostName
 
 import qualified Data.ByteString as B
 import qualified Database.HDBC.ClickHouse.ConnectionImpl as Impl
@@ -24,15 +25,16 @@ connectClickHouse config =
 
 mkConn :: Config -> IO Impl.Connection
 mkConn config = do
-  (sock, serverInfo) <- fconnect config
+  clientInfo <- fmap createClientInfo getHostName
+  (sock, serverInfo) <- fconnect clientInfo config
   let clientVer = clientVersion clientInfo
   return $ Impl.Connection {
     Impl.disconnect = fclose sock,
     Impl.commit = fcommit,
     Impl.rollback = frollback,
     Impl.run = frun sock,
-    Impl.runRaw = frunRaw sock serverInfo config,
-    Impl.prepare = Stmt.fprepare sock serverInfo config,
+    Impl.runRaw = frunRaw sock clientInfo serverInfo config,
+    Impl.prepare = Stmt.fprepare sock clientInfo serverInfo config,
     Impl.clone = connectClickHouse config,
     Impl.hdbcDriverName = "clickhouse",
     Impl.hdbcClientVer = clientVer,
@@ -40,20 +42,18 @@ mkConn config = do
     Impl.proxiedClientVer = clientVer,
     Impl.dbTransactionSupport = True,
     Impl.dbServerVer = serverVersion serverInfo,
-    Impl.getTables = fgetTables sock serverInfo config,
-    Impl.describeTable = fdescribeTable sock serverInfo config,
+    Impl.getTables = fgetTables sock clientInfo serverInfo config,
+    Impl.describeTable = fdescribeTable sock clientInfo serverInfo config,
     Impl.ping = fping sock
   }
 
-fconnect :: Config -> IO (Socket, ServerInfo)
-fconnect config = withSocketsDo $ do
-  addrInfo <- getAddrInfo Nothing (Just $ host config ) (Just $ show $ port config)
+fconnect :: ClientInfo -> Config -> IO (Socket, ServerInfo)
+fconnect clientInfo config = withSocketsDo $ do
+  addrInfo <- getAddrInfo Nothing (Just $ host config) (Just $ show $ port config)
   let serverAddr = head addrInfo
   sock <- socket (addrFamily serverAddr) Stream defaultProtocol
   connect sock (addrAddress serverAddr)
-
-  serverInfo <- Hello.send sock config
-
+  serverInfo <- Hello.send sock clientInfo config
   return (sock, serverInfo)
 
 fping :: Socket -> IO String
@@ -75,19 +75,19 @@ frun :: Socket -> String -> [SqlValue] -> IO Integer
 frun sock sql args =
   throwIO $ userError "frun not implemented"
 
-frunRaw :: Socket -> ServerInfo -> Config -> String -> IO ()
-frunRaw sock serverInfo config sql = do
-  Query.send sock sql serverInfo config
+frunRaw :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> IO ()
+frunRaw sock clientInfo serverInfo config sql = do
+  Query.send sock sql clientInfo serverInfo config
   return ()
 
-fgetTables :: Socket -> ServerInfo -> Config -> IO [String]
-fgetTables sock serverInfo config = do
-  (columns, values) <- Query.send sock "show tables" serverInfo config
+fgetTables :: Socket -> ClientInfo -> ServerInfo -> Config -> IO [String]
+fgetTables sock clientInfo serverInfo config = do
+  (columns, values) <- Query.send sock "show tables" clientInfo serverInfo config
   return $ concatMap (map fromSql) values
 
-fdescribeTable :: Socket -> ServerInfo -> Config -> String -> IO [(String, SqlColDesc)]
-fdescribeTable sock serverInfo config table = do
-  (columns, values) <- Query.send sock ("desc " ++ table) serverInfo config
+fdescribeTable :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> IO [(String, SqlColDesc)]
+fdescribeTable sock clientInfo serverInfo config table = do
+  (columns, values) <- Query.send sock ("desc " ++ table) clientInfo serverInfo config
   case (findIndex (\c -> columnName c == "name") columns, findIndex (\c -> columnName c == "type") columns) of
     (Just nameIdx, Just typeIdx) ->
       return $ map (\v -> f (fromSql $ v !! nameIdx) (fromSql $ v !! typeIdx)) values

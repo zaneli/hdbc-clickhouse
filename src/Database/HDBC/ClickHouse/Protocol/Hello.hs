@@ -15,10 +15,10 @@ import qualified Database.HDBC.ClickHouse.Protocol.Codec.Decoder as D
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Client as Client
 import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server
 
-send :: Socket -> Config -> IO ServerInfo
-send sock config = do
-  request sock config
-  res <- response sock
+send :: Socket -> ClientInfo -> Config -> IO ServerInfo
+send sock clientInfo config = do
+  request sock clientInfo config
+  res <- response sock clientInfo
   if (debug config)
     then printf "[hello] serverName=%s, majorVersion=%d, minorVersion=%d, patchVersion=%s, revision=%d, timeZone=%s\n"
                   (serverName res)
@@ -30,8 +30,8 @@ send sock config = do
     else return ()
   return res
 
-request :: Socket -> Config -> IO ()
-request sock config =
+request :: Socket -> ClientInfo -> Config -> IO ()
+request sock clientInfo config =
   sendAll sock $ B8.concat [
       B.singleton Client.hello,
       E.encodeString $ clientName clientInfo,
@@ -43,8 +43,8 @@ request sock config =
       E.encodeString $ password config
     ]
 
-response :: Socket -> IO ServerInfo
-response sock = do
+response :: Socket -> ClientInfo -> IO ServerInfo
+response sock clientInfo = do
   bs <- recv sock 1
   case (B.unpack bs) of
     [x] | x == Server.hello     -> return ()

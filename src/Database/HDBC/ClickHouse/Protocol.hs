@@ -20,15 +20,17 @@ data ClientInfo = ClientInfo {
   clientName :: String,
   clientMajorVersion :: Int,
   clientMinorVersion :: Int,
-  clientRevision :: Int
+  clientRevision :: Int,
+  clientHost :: String
 } deriving Show
 
-clientInfo :: ClientInfo
-clientInfo = ClientInfo {
+createClientInfo :: String -> ClientInfo
+createClientInfo host = ClientInfo {
   clientName = "hdbc-clickhouse",
   clientMajorVersion = 1,
   clientMinorVersion = 1,
-  clientRevision = 54213
+  clientRevision = 54213,
+  clientHost = host
 }
 
 clientVersion :: ClientInfo -> String

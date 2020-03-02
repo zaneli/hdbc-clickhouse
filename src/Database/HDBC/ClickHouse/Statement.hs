@@ -16,9 +16,9 @@ fprepare sock clientInfo serverInfo config sql = do
   mColumns <- newEmptyMVar
   mValues <- newEmptyMVar
   return Statement {
-    execute = fexecute sock clientInfo serverInfo sql,
-    executeRaw = fexecuteRaw sock clientInfo serverInfo sql,
-    executeMany = fexecuteMany sock,
+    execute = fexecute sock clientInfo serverInfo config sql,
+    executeRaw = fexecuteRaw sock clientInfo serverInfo config sql,
+    executeMany = fexecuteMany sock clientInfo serverInfo config sql,
     finish = ffinish mColumns mValues,
     fetchRow = ffetchRow sock config mColumns mValues,
     getColumnNames = fgetColumnNames mColumns,
@@ -26,18 +26,20 @@ fprepare sock clientInfo serverInfo config sql = do
     describeResult = fdescribeResult mColumns
   }
 
-fexecute :: Socket -> ClientInfo -> ServerInfo -> String -> [SqlValue] -> IO Integer
-fexecute sock clientInfo serverInfo sql value = do
-  Query.request sock sql clientInfo serverInfo
+fexecute :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> [SqlValue] -> IO Integer
+fexecute sock clientInfo serverInfo config sql value = do
+  q <- buildQuery sql value
+  Query.request sock q clientInfo serverInfo config
   return 1
 
-fexecuteRaw :: Socket -> ClientInfo -> ServerInfo -> String -> IO ()
-fexecuteRaw sock clientInfo serverInfo sql =
-  Query.request sock sql clientInfo serverInfo
+fexecuteRaw :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> IO ()
+fexecuteRaw sock clientInfo serverInfo config sql = do
+  fexecute sock clientInfo serverInfo config sql []
+  return ()
 
-fexecuteMany :: Socket -> [[SqlValue]] -> IO ()
-fexecuteMany sock mValues = do
-  throwIO $ userError "fexecuteMany not implemented"
+fexecuteMany :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> [[SqlValue]] -> IO ()
+fexecuteMany sock clientInfo serverInfo config sql values = do
+  mapM_ (fexecute sock clientInfo serverInfo config sql) values
 
 ffinish :: MVar [Column] -> MVar [[SqlValue]] -> IO ()
 ffinish mColumns mValues = do
@@ -57,3 +59,21 @@ fdescribeResult :: MVar [Column] -> IO [(String, SqlColDesc)]
 fdescribeResult mColumns = do
   cs <- tryReadMVar mColumns
   maybe (throwIO $ ClientException "failed to describeResult") (return . map (\c -> (columnName c, getSqlColDesc c))) cs
+
+buildQuery :: String -> [SqlValue] -> IO String
+buildQuery sql values = do
+  let (q, isInsideOfText, vs) = (foldl append ("", False, values) sql)
+  if isInsideOfText
+    then (throwIO $ ClientException "invalid SQL. broken `'` quote.")
+    else return ()
+  if (not $ null vs)
+    then (throwIO $ ClientException "invalid SQL. SqlValues do not match `?` placeholders.")
+    else return ()
+  return $ reverse q
+    where
+      append (xs, False,          v:vs) '?'  = ((reverse (quote v)) ++ xs, False,              vs)
+      append (xs, isInsideOfText, vs  ) '\'' = ('\'':xs,                   not isInsideOfText, vs)
+      append (xs, isInsideOfText, vs  )  x   = (x:xs,                      isInsideOfText,     vs)
+      -- TODO: Handle all SqlValue properly
+      quote (SqlString s) = "'" ++ s ++ "'"
+      quote v             = fromSql v

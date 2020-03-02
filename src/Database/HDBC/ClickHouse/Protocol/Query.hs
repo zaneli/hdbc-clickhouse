@@ -23,7 +23,7 @@ import qualified Database.HDBC.ClickHouse.Protocol.PacketTypes.Server as Server
 
 send :: Socket -> String -> ClientInfo -> ServerInfo -> Config -> IO ([Column], [[SqlValue]])
 send sock query clientInfo serverInfo config = do
-  request sock query clientInfo serverInfo
+  request sock query clientInfo serverInfo config
 
   mColumns <- newEmptyMVar
   mValues <- newEmptyMVar
@@ -38,8 +38,11 @@ send sock query clientInfo serverInfo config = do
           Just x  -> do remainder <- fetchAllRows mColumns mValues
                         return (x : remainder)
 
-request :: Socket -> String -> ClientInfo -> ServerInfo -> IO ()
-request sock query clientInfo serverInfo = do
+request :: Socket -> String -> ClientInfo -> ServerInfo -> Config -> IO ()
+request sock query clientInfo serverInfo config = do
+  if (debug config)
+    then printf "[Query] query=\"%s\"\n" query
+    else return ()
   sendAll sock $ B8.concat [
       B.singleton Client.query,
       E.encodeString "",

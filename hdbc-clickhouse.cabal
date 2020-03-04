@@ -1,0 +1,85 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 1b0e363abf24e66d461f32fb0f7031eb64a1f625668d398ad4518445fe81f4b5
+
+name:           hdbc-clickhouse
+version:        0.0.1.0
+description:    Please see the README on GitHub at <https://github.com/zaneli/hdbc-clickhouse#readme>
+homepage:       https://github.com/zaneli/hdbc-clickhouse#readme
+bug-reports:    https://github.com/zaneli/hdbc-clickhouse/issues
+author:         zaneli
+maintainer:     shun.otani@gmail.com
+copyright:      2020 Shunsuke Otani
+license:        BSD3
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/zaneli/hdbc-clickhouse
+
+library
+  exposed-modules:
+      Database.HDBC.ClickHouse
+  other-modules:
+      Database.HDBC.ClickHouse.Codec.Decoder
+      Database.HDBC.ClickHouse.Codec.Encoder
+      Database.HDBC.ClickHouse.Connection
+      Database.HDBC.ClickHouse.ConnectionImpl
+      Database.HDBC.ClickHouse.Data
+      Database.HDBC.ClickHouse.Data.ColDesc
+      Database.HDBC.ClickHouse.Data.Column
+      Database.HDBC.ClickHouse.Data.Creation
+      Database.HDBC.ClickHouse.Data.Reader
+      Database.HDBC.ClickHouse.Exception
+      Database.HDBC.ClickHouse.Protocol
+      Database.HDBC.ClickHouse.Protocol.Hello
+      Database.HDBC.ClickHouse.Protocol.PacketTypes.Client
+      Database.HDBC.ClickHouse.Protocol.PacketTypes.Compression
+      Database.HDBC.ClickHouse.Protocol.PacketTypes.Secure
+      Database.HDBC.ClickHouse.Protocol.PacketTypes.Server
+      Database.HDBC.ClickHouse.Protocol.Ping
+      Database.HDBC.ClickHouse.Protocol.Query
+      Database.HDBC.ClickHouse.Statement
+      Paths_hdbc_clickhouse
+  hs-source-dirs:
+      src
+  build-depends:
+      HDBC >=2.2
+    , array >=0.5
+    , base >=4.7 && <5
+    , bytestring >=0.10
+    , hostname >=1.0
+    , iproute >=1.7
+    , network >=2.8
+    , time >=1.8
+    , utf8-string >=1.0
+  default-language: Haskell2010
+
+test-suite hdbc-clickhouse-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Database.HDBC.ClickHouseSpec
+      Paths_hdbc_clickhouse
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      HDBC >=2.2
+    , array >=0.5
+    , base >=4.7 && <5
+    , bytestring >=0.10
+    , hdbc-clickhouse
+    , hostname >=1.0
+    , hspec
+    , iproute >=1.7
+    , network >=2.8
+    , time >=1.8
+    , utf8-string >=1.0
+  default-language: Haskell2010

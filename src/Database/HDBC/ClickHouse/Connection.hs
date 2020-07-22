@@ -30,7 +30,7 @@ mkConn config = do
     Impl.disconnect = fclose sock,
     Impl.commit = fcommit,
     Impl.rollback = frollback,
-    Impl.run = frun sock,
+    Impl.run = frun sock clientInfo serverInfo config,
     Impl.runRaw = frunRaw sock clientInfo serverInfo config,
     Impl.prepare = Stmt.fprepare sock clientInfo serverInfo config,
     Impl.clone = connectClickHouse config,
@@ -69,9 +69,12 @@ frollback :: IO ()
 frollback =
   throwIO $ userError "frollback not implemented"
 
-frun :: Socket -> String -> [SqlValue] -> IO Integer
-frun sock sql args =
-  throwIO $ userError "frun not implemented"
+frun :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> [SqlValue] -> IO Integer
+frun sock clientInfo serverInfo config sql value = do
+  stmt <- Stmt.fprepare sock clientInfo serverInfo config sql
+  execute stmt value
+  fetchAllRows' stmt
+  return 0 -- TODO: returns the number of rows modified http://hackage.haskell.org/package/HDBC-2.4.0.3/docs/Database-HDBC.html#v:run
 
 frunRaw :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> IO ()
 frunRaw sock clientInfo serverInfo config sql = do

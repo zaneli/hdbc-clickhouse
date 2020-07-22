@@ -83,3 +83,23 @@ spec = do
       results <- fetchAllRows stmt
       (length results) `shouldBe` 3
       results `shouldBe` (map (\record -> [record !! 3, record !! 5]) testRecords)
+
+  describe "quickQuery" $ do
+    it "quickQuery multiple times" $ do
+      con <- connectClickHouse config
+      results1 <- quickQuery con "select * from test_tbl_1" []
+      (length results1) `shouldBe` 3
+      results1 `shouldBe` testRecords
+
+      results2 <- quickQuery con "select * from test_tbl_1 where id = ? or title = ?" [toSql (3::Int), toSql "test2"]
+      (length results2) `shouldBe` 2
+      results2 `shouldBe` (tail testRecords)
+
+    it "run and quickQuery" $ do
+      con <- connectClickHouse config
+      num <- run con "select * from test_tbl_1" []
+      num `shouldBe` 0
+
+      results <- quickQuery con "select * from test_tbl_1 where id = ? or title = ?" [toSql (3::Int), toSql "test2"]
+      (length results) `shouldBe` 2
+      results `shouldBe` (tail testRecords)

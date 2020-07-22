@@ -30,7 +30,7 @@ fexecute :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> [SqlValue]
 fexecute sock clientInfo serverInfo config sql value = do
   q <- buildQuery sql value
   Query.request sock q clientInfo serverInfo config
-  return 1
+  return 0 -- TODO: returns the number of rows modified http://hackage.haskell.org/package/HDBC-2.4.0.3/docs/Database-HDBC.html#v:execute
 
 fexecuteRaw :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> IO ()
 fexecuteRaw sock clientInfo serverInfo config sql = do

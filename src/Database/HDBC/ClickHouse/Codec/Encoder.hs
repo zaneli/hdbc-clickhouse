@@ -16,11 +16,14 @@ encodeString str =
   in size `B8.append` encoded
 
 encodeNum :: (Integral a, Bits a) => a -> B.ByteString
-encodeNum num =
-  B.unfoldr f num
-    where f 0 = Nothing
-          f x | x >= 0x80 = Just (fromIntegral (x .|. 0x80), x `shiftR` 7)
-              | otherwise = Just (fromIntegral x, 0)
+encodeNum 0   = B.singleton 0
+encodeNum num = encodeNum' num
+  where
+    encodeNum' num =
+      B.unfoldr f num
+        where f 0 = Nothing
+              f x | x >= 0x80 = Just (fromIntegral (x .|. 0x80), x `shiftR` 7)
+                  | otherwise = Just (fromIntegral x, 0)
 
 encodeWord32 :: Word32 -> B.ByteString
 encodeWord32 w32 =

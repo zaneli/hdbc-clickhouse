@@ -78,17 +78,20 @@ frun sock clientInfo serverInfo config sql value = do
 
 frunRaw :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> IO ()
 frunRaw sock clientInfo serverInfo config sql = do
-  Query.send sock sql clientInfo serverInfo config
+  Query.sendQuery sock sql clientInfo serverInfo config
+  Query.receiveAllColumnAndValues sock config
   return ()
 
 fgetTables :: Socket -> ClientInfo -> ServerInfo -> Config -> IO [String]
 fgetTables sock clientInfo serverInfo config = do
-  (columns, values) <- Query.send sock "show tables" clientInfo serverInfo config
+  Query.sendQuery sock "show tables" clientInfo serverInfo config
+  (_, values) <- Query.receiveAllColumnAndValues sock config
   return $ concatMap (map fromSql) values
 
 fdescribeTable :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> IO [(String, SqlColDesc)]
 fdescribeTable sock clientInfo serverInfo config table = do
-  (columns, values) <- Query.send sock ("desc " ++ table) clientInfo serverInfo config
+  Query.sendQuery sock ("desc " ++ table) clientInfo serverInfo config
+  (columns, values) <- Query.receiveAllColumnAndValues sock config
   case (findIndex (\c -> columnName c == "name") columns, findIndex (\c -> columnName c == "type") columns) of
     (Just nameIdx, Just typeIdx) ->
       return $ map (\v -> f (fromSql $ v !! nameIdx) (fromSql $ v !! typeIdx)) values

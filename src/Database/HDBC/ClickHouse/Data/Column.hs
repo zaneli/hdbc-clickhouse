@@ -42,3 +42,7 @@ data Column = StringColumn {
     columnName :: String,
     itemType :: Column
 } deriving Show
+
+columnTypeName :: Column -> String
+columnTypeName (StringColumn _) = "String"
+-- TODO: fix all types

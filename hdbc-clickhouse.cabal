@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1b0e363abf24e66d461f32fb0f7031eb64a1f625668d398ad4518445fe81f4b5
+-- hash: dddee3a959011dca7597cdeaa84d8ae64da43d5f7e912ddba8959d6b91c8188e
 
 name:           hdbc-clickhouse
 version:        0.0.1.0
@@ -32,10 +32,12 @@ library
       Database.HDBC.ClickHouse.Connection
       Database.HDBC.ClickHouse.ConnectionImpl
       Database.HDBC.ClickHouse.Data
+      Database.HDBC.ClickHouse.Data.Block
       Database.HDBC.ClickHouse.Data.ColDesc
       Database.HDBC.ClickHouse.Data.Column
       Database.HDBC.ClickHouse.Data.Creation
       Database.HDBC.ClickHouse.Data.Reader
+      Database.HDBC.ClickHouse.Data.Writer
       Database.HDBC.ClickHouse.Exception
       Database.HDBC.ClickHouse.Protocol
       Database.HDBC.ClickHouse.Protocol.Hello

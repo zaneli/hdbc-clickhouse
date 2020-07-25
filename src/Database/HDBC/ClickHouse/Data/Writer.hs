@@ -1,5 +1,6 @@
 module Database.HDBC.ClickHouse.Data.Writer (encodeValue) where
 
+import Data.IP (fromIPv4, fromIPv6b)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Database.HDBC.SqlValue
 import Database.HDBC.ClickHouse.Data.Column
@@ -61,4 +62,8 @@ encodeValue (DateColumn _) (SqlUTCTime v) =
   E.encodeInt16 $ fromIntegral $ truncate $ (\n -> n / 24 / 3600) $ toRational $ utcTimeToPOSIXSeconds v
 encodeValue (DateTimeColumn _) (SqlUTCTime v) =
   E.encodeInt32 $ fromIntegral $ truncate $ toRational $ utcTimeToPOSIXSeconds v
+encodeValue (IPv4Column _) (SqlString v) =
+  B.concat $ map (B.singleton . fromIntegral) $ reverse $ fromIPv4 $ read v
+encodeValue (IPv6Column _) (SqlString v) =
+  B.concat $ map (B.singleton . fromIntegral) $ fromIPv6b $ read v
 -- TODO: fix all types

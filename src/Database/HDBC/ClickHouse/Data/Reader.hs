@@ -1,7 +1,7 @@
 module Database.HDBC.ClickHouse.Data.Reader (readValue) where
 
 import Data.Bits
-import Data.IP
+import Data.IP (toIPv4, toIPv6)
 import Data.List (intersperse, unfoldr)
 import Data.Word
 import Database.HDBC.SqlValue

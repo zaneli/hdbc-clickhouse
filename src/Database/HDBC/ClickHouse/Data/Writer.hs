@@ -5,7 +5,9 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Database.HDBC.SqlValue
 import Database.HDBC.ClickHouse.Data.Column
 
+import qualified Codec.Binary.UTF8.String as C
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as B8
 import qualified Database.HDBC.ClickHouse.Codec.Encoder as E
 
 -- TODO: fix handle overflow/underflow
@@ -66,4 +68,6 @@ encodeValue (IPv4Column _) (SqlString v) =
   B.concat $ map (B.singleton . fromIntegral) $ reverse $ fromIPv4 $ read v
 encodeValue (IPv6Column _) (SqlString v) =
   B.concat $ map (B.singleton . fromIntegral) $ fromIPv6b $ read v
+encodeValue (FixedStringColumn _ size) (SqlString v) =
+  B8.pack $ C.encodeString $ (take size v) ++ (replicate (size - (length v)) '\0')
 -- TODO: fix all types

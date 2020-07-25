@@ -121,7 +121,7 @@ encodeBlockInfo =
     B.singleton 1,
     B.singleton 0,
     B.singleton 2,
-    E.encodeWord32 4294967295, -- -1 to Word32
+    E.encodeInt32 (-1),
     B.singleton 0
   ]
 

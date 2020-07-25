@@ -1,5 +1,6 @@
 module Database.HDBC.ClickHouse.Data.Writer (encodeValue) where
 
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Database.HDBC.SqlValue
 import Database.HDBC.ClickHouse.Data.Column
 
@@ -56,4 +57,8 @@ encodeValue (Float32Column _) (SqlDouble v) =
   E.encodeFloat $ realToFrac v
 encodeValue (Float64Column _) (SqlDouble v) =
   E.encodeDouble v
+encodeValue (DateColumn _) (SqlUTCTime v) =
+  E.encodeInt16 $ fromIntegral $ truncate $ (\n -> n / 24 / 3600) $ toRational $ utcTimeToPOSIXSeconds v
+encodeValue (DateTimeColumn _) (SqlUTCTime v) =
+  E.encodeInt32 $ fromIntegral $ truncate $ toRational $ utcTimeToPOSIXSeconds v
 -- TODO: fix all types

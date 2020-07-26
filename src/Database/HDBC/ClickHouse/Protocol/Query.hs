@@ -11,7 +11,6 @@ import Network.Socket.ByteString (sendAll, recv)
 import Database.HDBC.ClickHouse.Data
 import Database.HDBC.ClickHouse.Data.Block
 import Database.HDBC.ClickHouse.Data.Column
-import Database.HDBC.ClickHouse.Data.Writer (encodeValue)
 import Database.HDBC.ClickHouse.Exception
 import Database.HDBC.ClickHouse.Protocol
 import Text.Printf
@@ -28,11 +27,15 @@ sendQuery :: Socket -> String -> ClientInfo -> ServerInfo -> Config -> IO ()
 sendQuery sock query clientInfo serverInfo config =
   request sock query clientInfo serverInfo config
 
+sendBlock :: Socket -> Block -> IO ()
 sendBlock sock block =
-  sendAll sock $ encodeBlock block
+  case (encodeBlock block) of
+    Right bs -> sendAll sock bs
+    Left msg -> throwIO $ ClientException msg
 
+sendEmptyBlock :: Socket -> IO ()
 sendEmptyBlock sock =
-  sendBlock sock emptyBlock
+  sendAll sock encodeEmptyBlock
 
 receiveColumnAndValues :: Socket -> Config -> MVar [Column] -> MVar [[SqlValue]] -> IO (Maybe [SqlValue])
 receiveColumnAndValues sock config mColumns mValues = 
@@ -95,7 +98,7 @@ request sock query clientInfo serverInfo config = do
       B.singleton stateComplete,
       B.singleton Compression.disable,
       E.encodeString query,
-      encodeBlock emptyBlock
+      encodeEmptyBlock
     ]
 
 encodeSettings :: B.ByteString
@@ -104,35 +107,11 @@ encodeSettings =
     -- empty string is a marker of the end of the settings
   E.encodeString ""
 
-encodeBlock :: Block -> B.ByteString
-encodeBlock block =
-  B8.concat $ [
-      B.singleton Client.blockOfData,
-      E.encodeString "", -- temporary table
-      encodeBlockInfo,
-      E.encodeNum $ length $ columns block,
-      E.encodeNum $ length $ rows block
-    ] ++
-      (map (\(c, vs) -> B8.concat ([E.encodeString (columnName c), E.encodeString (columnTypeName c)] ++ (map (\v -> encodeValue c v) vs))) $ zip (columns block) $ transpose (rows block))
-
-encodeBlockInfo :: B.ByteString
-encodeBlockInfo =
-  B8.concat [
-    B.singleton 1,
-    B.singleton 0,
-    B.singleton 2,
-    E.encodeInt32 (-1),
-    B.singleton 0
-  ]
-
 stateComplete :: Word8
 stateComplete = 2
 
 ifaceTypeTCP :: Word8
 ifaceTypeTCP = 1
-
-emptyBlock :: Block
-emptyBlock = Block { columns = [], rows = [] }
 
 response :: Socket -> Config -> MVar [Column] -> MVar [[SqlValue]] -> IO (Maybe [SqlValue])
 response sock config mColumns mValues = do

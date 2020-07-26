@@ -1,5 +1,9 @@
 module Database.HDBC.ClickHouse.Data.Column where
 
+import Data.IP (toIPv4, toIPv6)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Database.HDBC.SqlValue
+
 data Column = StringColumn {
     columnName :: String
 } | Int8Column {
@@ -63,3 +67,22 @@ columnTypeName (IPv6Column _)             = "IPv6"
 columnTypeName (FixedStringColumn _ size) = "FixedString(" ++ (show size) ++ ")"
 columnTypeName (ArrayColumn _ item)       = "Array(" ++ (columnTypeName item) ++ ")"
 columnTypeName (NullableColumn _ item)    = "Nullable(" ++ (columnTypeName item) ++ ")"
+
+nullValue :: Column -> SqlValue
+nullValue (StringColumn _)           = SqlString ""
+nullValue (Int8Column _)             = SqlInt32 0
+nullValue (Int16Column _)            = SqlInt32 0
+nullValue (Int32Column _)            = SqlInt32 0
+nullValue (Int64Column _)            = SqlInt64 0
+nullValue (UInt8Column _)            = SqlWord32 0
+nullValue (UInt16Column _)           = SqlWord32 0
+nullValue (UInt32Column _)           = SqlWord32 0
+nullValue (UInt64Column _)           = SqlWord64 0
+nullValue (Float32Column _)          = SqlDouble 0
+nullValue (Float64Column _)          = SqlDouble 0
+nullValue (DateColumn _)             = SqlUTCTime $ posixSecondsToUTCTime 0
+nullValue (DateTimeColumn _)         = SqlUTCTime $ posixSecondsToUTCTime 0
+nullValue (UUIDColumn _)             = SqlString "00000000-0000-0000-0000-000000000000"
+nullValue (IPv4Column _)             = SqlString $ show $ toIPv4 [0, 0, 0, 0]
+nullValue (IPv6Column _)             = SqlString $ show $ toIPv6 [0, 0, 0, 0, 0, 0, 0, 0]
+nullValue (FixedStringColumn _ size) = SqlString ""

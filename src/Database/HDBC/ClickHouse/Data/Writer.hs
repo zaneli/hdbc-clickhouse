@@ -1,5 +1,6 @@
 module Database.HDBC.ClickHouse.Data.Writer (encodeValue) where
 
+import Data.Char (toUpper)
 import Data.Either
 import Data.IP (fromIPv4, fromIPv6b)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
@@ -79,8 +80,9 @@ encodeValue (DateColumn _) (SqlUTCTime v) =
 encodeValue (DateTimeColumn _) (SqlUTCTime v) =
   Right $ E.encodeInt32 $ fromIntegral $ truncate $ toRational $ utcTimeToPOSIXSeconds v
 
-encodeValue (UUIDColumn _) (SqlString v) =
-  Left "encode uuid not implemented"
+encodeValue column@(UUIDColumn _) value@(SqlString v) = do
+  uuid <- maybe (Left $ printf "unsupported value: column=%s, value=%s" (show column) (show value)) Right $ toUUID v
+  return $ B.concat $ reverse $ map (\i -> toHexBytes (uuid !! i) []) [3, 4, 0, 1, 2]
 
 encodeValue (IPv4Column _) (SqlString v) =
   Right $ B.concat $ map (B.singleton . fromIntegral) $ reverse $ fromIPv4 $ read v
@@ -109,3 +111,40 @@ checkRange column value n f min max =
   if (n >= min && n <= max)
     then Right $ f $ fromIntegral n
     else Left $ printf "unsupported value: column=%s, value=%s" (show column) (show value)
+
+toUUID :: String -> Maybe [String]
+toUUID v =
+  if (length uuid /= 5 ||
+      length (uuid !! 0) /= 8 ||
+      length (uuid !! 1) /= 4 ||
+      length (uuid !! 2) /= 4 ||
+      length (uuid !! 3) /= 4 ||
+      length (uuid !! 4) /= 12)
+    then Nothing
+    else Just uuid
+    where
+      uuid = foldr f [] v
+      f '-' xs   = [] : xs
+      f c (x:xs) = (c:x):xs
+      f c []     = [[c]]
+
+toHexBytes "" xs = B.concat $ map B.singleton xs
+toHexBytes s  xs = let [s1, s2] = (take 2 s) in
+                   toHexBytes (drop 2 s) ((fromIntegral $ (hexChar $ toUpper s1) * 16 + (hexChar $ toUpper s2)):xs)
+  where
+    hexChar '0' = 0
+    hexChar '1' = 1
+    hexChar '2' = 2
+    hexChar '3' = 3
+    hexChar '4' = 4
+    hexChar '5' = 5
+    hexChar '6' = 6
+    hexChar '7' = 7
+    hexChar '8' = 8
+    hexChar '9' = 9
+    hexChar 'A' = 10
+    hexChar 'B' = 11
+    hexChar 'C' = 12
+    hexChar 'D' = 13
+    hexChar 'E' = 14
+    hexChar 'F' = 15

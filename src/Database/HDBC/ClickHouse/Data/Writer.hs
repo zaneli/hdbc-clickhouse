@@ -21,19 +21,27 @@ encodeValue column@(Int8Column _) value@(SqlInt32 v) =
   checkRange column value v B.singleton (-128) 127
 encodeValue column@(Int8Column _) value@(SqlInt64 v) =
   checkRange column value v B.singleton (-128) 127
+encodeValue column@(Int8Column _) value@(SqlInteger v) =
+  checkRange column value v B.singleton (-128) 127
 
 encodeValue column@(Int16Column _) value@(SqlInt32 v) =
   checkRange column value v E.encodeInt16 (-32768) 32767
 encodeValue column@(Int16Column _) value@(SqlInt64 v) =
+  checkRange column value v E.encodeInt16 (-32768) 32767
+encodeValue column@(Int16Column _) value@(SqlInteger v) =
   checkRange column value v E.encodeInt16 (-32768) 32767
 
 encodeValue (Int32Column _) (SqlInt32 v) =
   Right $ E.encodeInt32 v
 encodeValue column@(Int32Column _) value@(SqlInt64 v) =
   checkRange column value v E.encodeInt32 (-2147483648) 2147483647
+encodeValue column@(Int32Column _) value@(SqlInteger v) =
+  checkRange column value v E.encodeInt32 (-2147483648) 2147483647
 
 encodeValue (Int64Column _) (SqlInt64 v) =
   Right $ E.encodeInt64 v
+encodeValue column@(Int64Column _) value@(SqlInteger v) =
+  checkRange column value v E.encodeInt64 (-9223372036854775808) 9223372036854775807
 
 encodeValue column@(UInt8Column _) value@(SqlWord32 v) =
   checkRange column value v B.singleton 0 255
@@ -42,6 +50,8 @@ encodeValue column@(UInt8Column _) value@(SqlWord64 v) =
 encodeValue column@(UInt8Column _) value@(SqlInt32 v) =
   checkRange column value v B.singleton 0 255
 encodeValue column@(UInt8Column _) value@(SqlInt64 v) =
+  checkRange column value v B.singleton 0 255
+encodeValue column@(UInt8Column _) value@(SqlInteger v) =
   checkRange column value v B.singleton 0 255
 
 encodeValue column@(UInt16Column _) value@(SqlWord32 v) =
@@ -52,6 +62,8 @@ encodeValue column@(UInt16Column _) value@(SqlInt32 v) =
   checkRange column value v E.encodeWord16 0 65535
 encodeValue column@(UInt16Column _) value@(SqlInt64 v) =
   checkRange column value v E.encodeWord16 0 65535
+encodeValue column@(UInt16Column _) value@(SqlInteger v) =
+  checkRange column value v E.encodeWord16 0 65535
 
 encodeValue (UInt32Column _) (SqlWord32 v) =
   Right $ E.encodeWord32 v
@@ -61,11 +73,15 @@ encodeValue column@(UInt32Column _) value@(SqlInt32 v) =
   checkRange column value v E.encodeWord32 0 2147483647 -- Literal 4294967295 is out of the GHC.Int.Int32 range -2147483648..2147483647
 encodeValue column@(UInt32Column _) value@(SqlInt64 v) =
   checkRange column value v E.encodeWord32 0 4294967295
+encodeValue column@(UInt32Column _) value@(SqlInteger v) =
+  checkRange column value v E.encodeWord32 0 4294967295
 
 encodeValue (UInt64Column _) (SqlWord64 v) =
   Right $ E.encodeWord64 v
 encodeValue column@(UInt64Column _) value@(SqlInt64 v) =
   checkRange column value v E.encodeWord64 0 9223372036854775807 -- Literal 18446744073709551615 is out of the GHC.Int.Int64 range -9223372036854775808..9223372036854775807
+encodeValue column@(UInt64Column _) value@(SqlInteger v) =
+  checkRange column value v E.encodeWord64 0 18446744073709551615
 
 encodeValue column@(Float32Column _) value@(SqlDouble v) =
   let f = (realToFrac v)::Float in

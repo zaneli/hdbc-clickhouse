@@ -103,8 +103,8 @@ insert sock clientInfo serverInfo config sql values = do
   columns <- Query.receiveColumns sock config
   case columns of
     Just(cs) -> do
-      Query.sendBlock sock $ Block { columns = cs, rows = values }
-      Query.sendEmptyBlock sock
+      Query.sendBlock sock (Block { columns = cs, rows = values }) config
+      Query.sendEmptyBlock sock config
 
       mColumns <- newEmptyMVar
       mValues <- newEmptyMVar

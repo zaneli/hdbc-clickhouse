@@ -4,7 +4,7 @@ import Data.Time (defaultTimeLocale, parseTimeM, UTCTime, ZonedTime)
 import Data.Word
 import Database.HDBC
 import Database.HDBC.SqlValue
-import Database.HDBC.ClickHouse (connectClickHouse, Config(..), defaultJoinSqlValues, ping)
+import Database.HDBC.ClickHouse (connectClickHouse, Config(..), defaultJoinSqlValues, defaultSplitSqlValue, ping)
 import Test.Hspec
 
 spec :: Spec
@@ -16,7 +16,8 @@ spec = do
     username = "default",
     password = "",
     debug = True,
-    joinSqlValues = defaultJoinSqlValues
+    joinSqlValues = defaultJoinSqlValues,
+    splitSqlValue = defaultSplitSqlValue
   }
 
   date1 <- parseTimeM False defaultTimeLocale "%F" "2020-01-01"

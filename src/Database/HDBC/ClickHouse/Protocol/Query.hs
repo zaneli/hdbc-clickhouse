@@ -27,15 +27,15 @@ sendQuery :: Socket -> String -> ClientInfo -> ServerInfo -> Config -> IO ()
 sendQuery sock query clientInfo serverInfo config =
   request sock query clientInfo serverInfo config
 
-sendBlock :: Socket -> Block -> IO ()
-sendBlock sock block =
-  case (encodeBlock block) of
+sendBlock :: Socket -> Block -> Config -> IO ()
+sendBlock sock block config =
+  case (encodeBlock block config) of
     Right bs -> sendAll sock bs
     Left msg -> throwIO $ ClientException msg
 
-sendEmptyBlock :: Socket -> IO ()
-sendEmptyBlock sock =
-  sendAll sock encodeEmptyBlock
+sendEmptyBlock :: Socket -> Config -> IO ()
+sendEmptyBlock sock config =
+  sendAll sock $ encodeEmptyBlock config
 
 receiveColumnAndValues :: Socket -> Config -> MVar [Column] -> MVar [[SqlValue]] -> IO (Maybe [SqlValue])
 receiveColumnAndValues sock config mColumns mValues = 
@@ -98,7 +98,7 @@ request sock query clientInfo serverInfo config = do
       B.singleton stateComplete,
       B.singleton Compression.disable,
       E.encodeString query,
-      encodeEmptyBlock
+      encodeEmptyBlock config
     ]
 
 encodeSettings :: B.ByteString

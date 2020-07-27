@@ -1,6 +1,7 @@
 module Database.HDBC.ClickHouse.Protocol where
 
-import Data.List (intercalate)
+import Data.Either
+import Data.List (intercalate, unfoldr)
 import Database.HDBC.SqlValue
 
 data Config = Config {
@@ -10,11 +11,24 @@ data Config = Config {
   username :: String,
   password :: String,
   debug :: Bool,
-  joinSqlValues :: [SqlValue] -> SqlValue
+  joinSqlValues :: [SqlValue] -> SqlValue,
+  splitSqlValue :: SqlValue -> Either String [SqlValue]
 }
 
 defaultJoinSqlValues :: [SqlValue] -> SqlValue
-defaultJoinSqlValues = toSql . intercalate "," . map fromSql
+defaultJoinSqlValues = toSql . (\s -> "[" ++ s ++ "]") . intercalate "," . map fromSql
+
+defaultSplitSqlValue :: SqlValue -> Either String [SqlValue]
+defaultSplitSqlValue v
+  | (length s >= 2) && (head s == '[') && (last s == ']') = Right $ map toSql $ split
+  where
+    s = fromSql v
+    split = foldr f [] $ init $ tail s
+      where
+        f ',' xs   = [] : xs
+        f c (x:xs) = (c:x):xs
+        f c []     = [[c]]
+defaultSplitSqlValue v = Left $ show v ++ " is not array format."
 
 data ClientInfo = ClientInfo {
   clientName :: String,

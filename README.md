@@ -12,14 +12,14 @@
 extra-deps:
 - HDBC-2.4.0.3
 - git: https://github.com/zaneli/hdbc-clickhouse
-  commit: 140e597f31ec89c81be08c8254e4f4485bac306b
+  commit: 7d35797817d9cfea95ccf995e6b0af075af9aeb9
 ```
 
 ## Usage
 
 ```hs
 import Database.HDBC
-import Database.HDBC.ClickHouse (connectClickHouse, Config(..), defaultJoinSqlValues)
+import Database.HDBC.ClickHouse (connectClickHouse, Config(..), defaultJoinSqlValues, defaultSplitSqlValue)
 
 exec = do
   let config = Config {
@@ -29,7 +29,8 @@ exec = do
     username = "default",
     password = "",
     debug = True,
-    joinSqlValues = defaultJoinSqlValues
+    joinSqlValues = defaultJoinSqlValues,
+    splitSqlValue = defaultSplitSqlValue
   }
   con  <- connectClickHouse config
 

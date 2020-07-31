@@ -110,13 +110,22 @@ encodeValue (FixedStringColumn _ size) (SqlString v) _ =
   Right $ B8.pack $ C.encodeString $ (take size v) ++ (replicate (size - (length v)) '\0')
 
 encodeValue (ArrayColumn _ item) value config = do
-  case item of
-    (ArrayColumn _ _) -> Left "write nested Array not supported yet."
-    _ -> Right ()
   values <- splitSqlValue config value
-  encodedValues <- mapM (\v -> encodeValue item v config) values
-  let encodedSize = (E.encodeWord64 . fromIntegral . length) values
-  return $ encodedSize `B.append` B.concat encodedValues
+  (encodedValues, lowerDepthSizes) <- encodeValues item values
+  let encodedSizes = map (E.encodeWord64 . fromIntegral) $ ((length values) : lowerDepthSizes)
+  return $ (B.concat encodedSizes) `B.append` (B.concat encodedValues)
+    where
+      encodeValues :: Column -> [SqlValue] -> Either String ([B.ByteString], [Int])
+      encodeValues (ArrayColumn _ item) values = do
+        lowerDepthValues <-  mapM (splitSqlValue config) values
+        let currentDepthSizes = tail $ scanl (+) 0 $ map length lowerDepthValues
+        encodedValuesWithSizes <- mapM (encodeValues item) lowerDepthValues
+        let encodedValues = concat $ map (\(v, _) -> v) encodedValuesWithSizes
+        let lowerDepthSizes = concat $ map (\(_, s) -> s) encodedValuesWithSizes
+        return (encodedValues, currentDepthSizes ++ lowerDepthSizes)
+      encodeValues item values = do
+        encodeds <- mapM (\v -> encodeValue item v config) values
+        return (encodeds, [])
 
 encodeValue (NullableColumn _ item) SqlNull config =
   fmap (\v -> B.singleton 1 `B.append` v) (encodeValue item (nullValue item) config)

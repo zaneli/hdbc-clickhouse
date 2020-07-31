@@ -20,14 +20,21 @@ defaultJoinSqlValues = toSql . (\s -> "[" ++ s ++ "]") . intercalate "," . map f
 
 defaultSplitSqlValue :: SqlValue -> Either String [SqlValue]
 defaultSplitSqlValue v
-  | (length s >= 2) && (head s == '[') && (last s == ']') = Right $ map toSql $ split
+  | (length s >= 2) && (head s == '[') && (last s == ']') = do
+  let (xs, depth) = split s
+  if depth == 0 then (Right ()) else (Left $ "invalid [...] depth: " ++ show depth)
+  Right $ map toSql xs
   where
     s = fromSql v
-    split = foldr f [] $ init $ tail s
+    split s = foldr f ([], 0) $ init $ tail s
       where
-        f ',' xs   = [] : xs
-        f c (x:xs) = (c:x):xs
-        f c []     = [[c]]
+        f ',' (xs, 0)     = ([]:xs, 0)
+        f '[' ((x:xs), n) = (('[':x):xs, n+1)
+        f ']' ((x:xs), n) = ((']':x):xs, n-1)
+        f '[' ([], n)     = ([['[']], n+1)
+        f ']' ([], n)     = ([[']']], n-1)
+        f c   ((x:xs), n) = ((c:x):xs, n)
+        f c   ([], n)     = ([[c]], n)
 defaultSplitSqlValue v = Left $ show v ++ " is not array format."
 
 data ClientInfo = ClientInfo {

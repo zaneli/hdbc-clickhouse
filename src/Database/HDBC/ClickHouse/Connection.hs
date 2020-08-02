@@ -72,9 +72,9 @@ frollback =
 frun :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> [SqlValue] -> IO Integer
 frun sock clientInfo serverInfo config sql value = do
   stmt <- Stmt.fprepare sock clientInfo serverInfo config sql
-  execute stmt value
+  result <- execute stmt value
   fetchAllRows' stmt
-  return 0 -- TODO: returns the number of rows modified http://hackage.haskell.org/package/HDBC-2.4.0.3/docs/Database-HDBC.html#v:run
+  return result
 
 frunRaw :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> IO ()
 frunRaw sock clientInfo serverInfo config sql = do

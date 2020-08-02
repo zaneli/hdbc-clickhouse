@@ -34,7 +34,7 @@ fexecute :: Socket -> ClientInfo -> ServerInfo -> Config -> String -> Bool -> [S
 fexecute sock clientInfo serverInfo config sql isInsert value =
   if isInsert then do
     insert sock clientInfo serverInfo config sql [value]
-    return 0  -- TODO: returns the number of rows modified http://hackage.haskell.org/package/HDBC-2.4.0.3/docs/Database-HDBC.html#v:execute
+    return 1
   else do
     query <- buildQuery sql value
     Query.sendQuery sock query clientInfo serverInfo config

@@ -36,4 +36,6 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - hdbc-clickhouse
-    - hspec
+    - hspec >= 2.7
+    - process >= 1.6
+    - uuid >= 1.2

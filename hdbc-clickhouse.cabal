@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e4f56aaf832da85081ead61a19e5af97b272ce6338beb0e182538e4fd2fc0a01
+-- hash: 4b2171baa3597e851588925687ed481852c8bdf3b9552e3c4f00439851583be6
 
 name:           hdbc-clickhouse
 version:        0.0.1.0
@@ -67,6 +67,7 @@ test-suite hdbc-clickhouse-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Database.HDBC.ClickHouse.InsertSpec
       Database.HDBC.ClickHouse.PingSpec
       Database.HDBC.ClickHouse.SelectSpec
       Database.HDBC.ClickHouse.TestUtil
@@ -81,9 +82,11 @@ test-suite hdbc-clickhouse-test
     , bytestring >=0.10
     , hdbc-clickhouse
     , hostname >=1.0
-    , hspec
+    , hspec >=2.7
     , iproute >=1.7
     , network >=2.8
+    , process >=1.6
     , time >=1.8
     , utf8-string >=1.0
+    , uuid >=1.2
   default-language: Haskell2010

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4b2171baa3597e851588925687ed481852c8bdf3b9552e3c4f00439851583be6
+-- hash: a6ae4d89003b21bb7a0d61881b9f54935622b2d4980da5fc82eb5a953935b1e3
 
 name:           hdbc-clickhouse
 version:        0.0.1.0
@@ -67,8 +67,8 @@ test-suite hdbc-clickhouse-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Database.HDBC.ClickHouse.InquirySpec
       Database.HDBC.ClickHouse.InsertSpec
-      Database.HDBC.ClickHouse.PingSpec
       Database.HDBC.ClickHouse.SelectSpec
       Database.HDBC.ClickHouse.TestUtil
       Paths_hdbc_clickhouse

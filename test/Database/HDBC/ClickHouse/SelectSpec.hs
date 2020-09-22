@@ -22,7 +22,7 @@ spec = do
   describe "prepare and execute" $ do
     it "no parameter" $ do
       con <- connect
-      stmt <- prepare con "select * from test_tbl_1"
+      stmt <- prepare con "select * from test_tbl_for_select"
       execute stmt []
       results <- fetchAllRows stmt
       (length results) `shouldBe` 3
@@ -30,7 +30,7 @@ spec = do
 
     it "int parameter" $ do
       con <- connect
-      stmt <- prepare con "select * from test_tbl_1 where id = ?"
+      stmt <- prepare con "select * from test_tbl_for_select where id = ?"
       execute stmt [toSql (1::Int)]
       results <- fetchAllRows stmt
       (length results) `shouldBe` 1
@@ -38,7 +38,7 @@ spec = do
 
     it "string parameter" $ do
       con <- connect
-      stmt <- prepare con "select * from test_tbl_1 where title = ?"
+      stmt <- prepare con "select * from test_tbl_for_select where title = ?"
       execute stmt [toSql "test1"]
       results <- fetchAllRows stmt
       (length results) `shouldBe` 1
@@ -46,7 +46,7 @@ spec = do
 
     it "placeholder character inside text" $ do
       con <- connect
-      stmt <- prepare con "select * from test_tbl_1 where title = '?'"
+      stmt <- prepare con "select * from test_tbl_for_select where title = '?'"
       execute stmt []
       results <- fetchAllRows stmt
       (length results) `shouldBe` 1
@@ -54,7 +54,7 @@ spec = do
 
     it "int and string parameters" $ do
       con <- connect
-      stmt <- prepare con "select * from test_tbl_1 where id = ? or title = ?"
+      stmt <- prepare con "select * from test_tbl_for_select where id = ? or title = ?"
       execute stmt [toSql (3::Int), toSql "test2"]
       results <- fetchAllRows stmt
       (length results) `shouldBe` 2
@@ -62,7 +62,7 @@ spec = do
 
     it "specify columns" $ do
       con <- connect
-      stmt <- prepare con "select ip_v4, uuid from test_tbl_1"
+      stmt <- prepare con "select ip_v4, uuid from test_tbl_for_select"
       execute stmt []
       results <- fetchAllRows stmt
       (length results) `shouldBe` 3
@@ -71,19 +71,19 @@ spec = do
   describe "quickQuery" $ do
     it "quickQuery multiple times" $ do
       con <- connect
-      results1 <- quickQuery con "select * from test_tbl_1" []
+      results1 <- quickQuery con "select * from test_tbl_for_select" []
       (length results1) `shouldBe` 3
       results1 `shouldBe` testRecords
 
-      results2 <- quickQuery con "select * from test_tbl_1 where id = ? or title = ?" [toSql (3::Int), toSql "test2"]
+      results2 <- quickQuery con "select * from test_tbl_for_select where id = ? or title = ?" [toSql (3::Int), toSql "test2"]
       (length results2) `shouldBe` 2
       results2 `shouldBe` (tail testRecords)
 
     it "run and quickQuery" $ do
       con <- connect
-      num <- run con "select * from test_tbl_1" []
+      num <- run con "select * from test_tbl_for_select" []
       num `shouldBe` 0
 
-      results <- quickQuery con "select * from test_tbl_1 where id = ? or title = ?" [toSql (3::Int), toSql "test2"]
+      results <- quickQuery con "select * from test_tbl_for_select where id = ? or title = ?" [toSql (3::Int), toSql "test2"]
       (length results) `shouldBe` 2
       results `shouldBe` (tail testRecords)

@@ -23,6 +23,9 @@ jobs:
     - name: Start ClickHouse
       run: docker run -p 9000:9000 -p 8123:8123 -d --name some-clickhouse-server --ulimit nofile=262144:262144 --rm yandex/clickhouse-server
       shell: bash
+    - name: Wait for start ClickHouse
+      run: ./test/health_check.sh
+      shell: bash
     - name: Prepare test data
       run: ./test/prepare.sh
       shell: bash

@@ -1,6 +1,6 @@
 # hdbc-clickhouse
 
-[![Build Status](https://travis-ci.org/zaneli/hdbc-clickhouse.svg?branch=master)](https://travis-ci.org/zaneli/hdbc-clickhouse)
+![CI Status](https://github.com/zaneli/hdbc-clickhouse/actions/workflows/ci.yml/badge.svg)
 
 ---
 

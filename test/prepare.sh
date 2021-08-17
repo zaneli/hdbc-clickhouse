@@ -2,7 +2,7 @@
 
 
 docker run --rm --link some-clickhouse-server:clickhouse-server yandex/clickhouse-client --host clickhouse-server --query="
-  DROP TABLE IF EXISTS default.test_tbl_1;
+  DROP TABLE IF EXISTS default.test_tbl_for_select;
 "
 
 docker run --rm --link some-clickhouse-server:clickhouse-server yandex/clickhouse-client --host clickhouse-server --query="

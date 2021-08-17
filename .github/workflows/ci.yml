@@ -1,0 +1,31 @@
+name: CI
+on:
+  pull_request:
+  push:
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        ghc: [8.6.5]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Set up Haskell
+      uses: haskell/actions/setup@v1
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        enable-stack: true
+    - name: Set up ClickHouse
+      run: docker pull yandex/clickhouse-server && docker pull yandex/clickhouse-client
+      shell: bash
+    - name: Start ClickHouse
+      run: docker run -p 9000:9000 -p 8123:8123 -d --name some-clickhouse-server --ulimit nofile=262144:262144 --rm yandex/clickhouse-server
+      shell: bash
+    - name: Prepare test data
+      run: ./test/prepare.sh
+      shell: bash
+    - name: Test
+      run: stack --no-terminal --skip-ghc-check test
+      shell: bash
